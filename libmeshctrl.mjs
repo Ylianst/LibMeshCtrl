@@ -121,6 +121,7 @@ let _make_bitwise_enum = (properties, {all_prop=null, none_prop=null, start_valu
 }
 
 /** Represents an error thrown from the server
+ * @extends Error
  */
 class ServerError extends Error {
     constructor(message) {
@@ -129,6 +130,7 @@ class ServerError extends Error {
 }
 
 /** Represents an error in the user given input
+ * @extends Error
  */
 class ValueError extends Error {
     constructor(message) {

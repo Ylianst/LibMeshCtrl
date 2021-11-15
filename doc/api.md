@@ -4,10 +4,10 @@
 <dt><a href="#_Deferred">_Deferred</a></dt>
 <dd><p>Simple deferred class to wrap a promise, so it&#39;s readable from outside. This makes certain synchronization easier. Usable like a promise.</p>
 </dd>
-<dt><a href="#ServerError">ServerError</a></dt>
+<dt><a href="#ServerError">ServerError</a> ⇐ <code>Error</code></dt>
 <dd><p>Represents an error thrown from the server</p>
 </dd>
-<dt><a href="#ValueError">ValueError</a></dt>
+<dt><a href="#ValueError">ValueError</a> ⇐ <code>Error</code></dt>
 <dd><p>Represents an error in the user given input</p>
 </dd>
 <dt><a href="#Session">Session</a></dt>
@@ -39,16 +39,18 @@ Simple deferred class to wrap a promise, so it's readable from outside. This mak
 
 <a name="ServerError"></a>
 
-## ServerError
+## ServerError ⇐ <code>Error</code>
 Represents an error thrown from the server
 
 **Kind**: global class  
+**Extends**: <code>Error</code>  
 <a name="ValueError"></a>
 
-## ValueError
+## ValueError ⇐ <code>Error</code>
 Represents an error in the user given input
 
 **Kind**: global class  
+**Extends**: <code>Error</code>  
 <a name="Session"></a>
 
 ## Session
