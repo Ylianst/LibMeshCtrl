@@ -370,10 +370,8 @@ class Session {
     }
 
     _receive_message(raw_data) {
-        console.log("message")
         var data = null;
         data = JSON.parse(raw_data)
-        console.log(data)
         if (data.action == "serverinfo") {
             this._currentDomain = data.serverinfo.domain;
             this._server_info = data.serverinfo
@@ -1801,19 +1799,6 @@ class _Files extends _Tunnel {
         let request_id = `upload_${this._get_request_id()}`
         let outstream = new _SizeChunker(65564)
         this._requests[request_id] = {id: request_id, type: "upload", source: source, chunker: outstream, target: target, name: name, size: 0, chunks: [], complete: false, has_data: new _Deferred(), inflight: 0}
-        // outstream.on("data", (data) => {
-        //     console.log("Read a chunk")
-        //     this._requests[request_id].chunks.push(data)
-        //     console.log(this._requests[request_id].chunks)
-        //     this._requests[request_id].has_data.resolve()
-        //     this._requests[request_id].has_data = new _Deferred()
-        // })
-        // outstream.on("end",() => {
-        //     console.log("Ended")
-        //     this._requests[request_id].has_data.resolve()
-        //     this._requests[request_id].complete = true
-        // })
-        // source.pipe(outstream)
         this._request_queue.push(this._requests[request_id])
         let f = ()=>{
             return new Promise((resolve, reject)=>{
