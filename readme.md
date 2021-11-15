@@ -24,7 +24,7 @@ await session.initialized
 ```
 
 ## Session Parameters
-`url`: URL of meshcentral server to connect to
+`url`: URL of meshcentral server to connect to. Should start with either "ws://" or "wss://".
 
 `options`: POJO of optional parameters
 

@@ -14,9 +14,16 @@ import ws from "ws"
 import { default as urllib } from "url" //We use url as a variable down there a lot, so namespace this as a library
 import stream from "stream"
 import EventEmitter from 'events'
+import _ from "lodash"
 
 "use strict"
 
+/**
+ * Simple deferred class to wrap a promise, so it's readable from outside. This makes certain synchronization easier. Usable like a promise.
+ * @class
+ * @prop {boolean} resolved - Whether the promise has resolved
+ * @prop {boolean} rejected - Whether the promise has rejected
+ */
 class _Deferred {
     constructor() {
         this.resolved = false
@@ -32,6 +39,7 @@ class _Deferred {
         })
         this.then = this.promise.then.bind(this.promise)
         this.finally = this.promise.finally.bind(this.promise)
+        this.catch = this.promise.catch.bind(this.promise)
     }
 }
 
@@ -112,16 +120,141 @@ let _make_bitwise_enum = (properties, {all_prop=null, none_prop=null, start_valu
     return e
 }
 
+/** Represents an error thrown from the server
+ */
+class ServerError extends Error {
+    constructor(message) {
+        super(message)
+    }
+}
 
+/** Represents an error in the user given input
+ */
+class ValueError extends Error {
+    constructor(message) {
+        super(message)
+    }
+}
+
+/**
+ * @readonly
+ * @enum {number} - Bitwise flags for user rights
+ * @prop {number} norights - User has no rights
+ * @prop {number} backup - 
+ * @prop {number} manageusers - User can add or remove users
+ * @prop {number} restore - 
+ * @prop {number} fileaccess - 
+ * @prop {number} update - 
+ * @prop {number} locked - 
+ * @prop {number} nonewgroups - 
+ * @prop {number} notools - 
+ * @prop {number} usergroups - 
+ * @prop {number} recordings -
+ * @prop {number} locksettings -
+ * @prop {number} allevents -
+ * @prop {number} fullrights - User has all rights above
+ */
 const USERRIGHTS = _make_bitwise_enum(['backup', 'manageusers', 'restore', 'fileaccess', 'update', 'locked', 'nonewgroups', 'notools', 'usergroups', 'recordings', 'locksettings', 'allevents'], {all_prop:"fullrights", none_prop: "norights"})
-const MESHRIGHTS = _make_bitwise_enum(["editgroup", "manageusers", "manageddevices", "remotecontrol", "agentconsole", "serverfiles", "wakedevices", "notes", "desktopviewonly", "noterminal", "nofiles", "noamt", "limiteddesktop", "limitedevents", "chatnotify", "uninstall", "noremotedesktop", "remotecommands", "resetpoweroff"], {all_prop:"fullrights", none_prop: "norights"})
 
+/**
+ * @readonly
+ * @enum {number} - Bitwise flags for mesh rights
+ * @prop {number} norights - User has no rights
+ * @prop {number} editgroup - The right to edit the group
+ * @prop {number} manageusers - Right to manage users
+ * @prop {number} managedevices - Right to add/remove/rename devices
+ * @prop {number} remotecontrol - Remotely control nodes
+ * @prop {number} agentconsole - Access to the agent console
+ * @prop {number} serverfiles - 
+ * @prop {number} wakedevices - Wake up devices from sleep
+ * @prop {number} notes - 
+ * @prop {number} desktopviewonly - Only view desktop; no control
+ * @prop {number} noterminal - Disable terminal
+ * @prop {number} nofiles - Disable file handling
+ * @prop {number} noamt -
+ * @prop {number} limiteddesktop -
+ * @prop {number} limitedevents -
+ * @prop {number} chatnotify -
+ * @prop {number} uninstall -
+ * @prop {number} noremotedesktop - Disable remote desktop
+ * @prop {number} remotecommands - Right to send commands to device
+ * @prop {number} resetpoweroff - Right to reset or power off node
+ * @prop {number} fullrights - User has all rights above
+ */
+const MESHRIGHTS = _make_bitwise_enum(["editgroup", "manageusers", "managedevices", "remotecontrol", "agentconsole", "serverfiles", "wakedevices", "notes", "desktopviewonly", "noterminal", "nofiles", "noamt", "limiteddesktop", "limitedevents", "chatnotify", "uninstall", "noremotedesktop", "remotecommands", "resetpoweroff"], {all_prop:"fullrights", none_prop: "norights"})
+
+/**
+ * @readonly
+ * @enum {number} - Bitwise flags for 
+ * @prop {number} none - Use no flags
+ * @prop {number} desktopnotify - 
+ * @prop {number} terminalnotify - 
+ * @prop {number} filesnotify - 
+ * @prop {number} desktopprompt - 
+ * @prop {number} terminalprompt - 
+ * @prop {number} filesprompt - 
+ * @prop {number} desktopprivacybar - 
+ * @prop {number} all - Use all flags
+ */
 const CONSENTFLAGS = _make_bitwise_enum(["desktopnotify", "terminalnotify", "filesnotify", "desktopprompt", "terminalprompt", "filesprompt", "desktopprivacybar"], {all_prop:"all", none_prop: "none"})
 
+/**
+ * @readonly
+ * @enum {number} - Bitwise flags for features to be used in meshes
+ * @prop {number} none - Use no flags
+ * @prop {number} autoremove - 
+ * @prop {number} hostnamesync - 
+ * @prop {number} recordsessions - Allow recording of sessions
+ * @prop {number} all - Use all flags
+ */
+const MESHFEATURES = _make_bitwise_enum(["autoremove", "hostnamesync", "recordsessions"], {all_prop:"all", none_prop: "none"})
+
+/**
+ * @readonly
+ * @enum {string} - String constants used to determine which type of device share to create
+ * @prop {string} desktop
+ * @prop {string} terminal
+ */
 const SHARINGTYPE = _make_enum(["desktop", "terminal"], {use_string: true})
+
+/**
+ * @readonly
+ * @enum {number} - Internal enum used to map SHARINGTYPE to the number used by MeshCentral
+ * @prop {number} desktop
+ * @prop {number} terminal
+ */
 const SHARINGTYPENUM = _make_enum(["desktop", "terminal"], {start_value: 0x1})
 
+/**
+ * @readonly
+ * @enum {number} - Which icon to use for a device
+ * @prop {number} desktop
+ * @prop {number} latop
+ * @prop {number} phone
+ * @prop {number} server
+ * @prop {number} htpc
+ * @prop {number} router
+ * @prop {number} embedded
+ * @prop {number} virtual
+ */
+const ICON = _make_enum(["desktop", "latop", "phone", "server", "htpc", "router", "embedded", "virtual"], {start_value: 0x1})
+
+/** Class for MeshCentral Session 
+ * @prop {_Deffered} initialized - Promise which is resolved when session is initialized, and rejected upon failure
+ * @prop {bool} alive - Whether the session is currently alive*/
 class Session {
+    /**
+     * Constructor for Session
+     * @param {string} url - URL of meshcentral server to connect to. Should start with either "ws://" or "wss://".
+     * @param {Object} [options={}] - Optional arguments for instantiation
+     * @param {string} [options.user=null] - Username of to use for connecting. Can also be username generated from token.
+     * @param {string} [options.domain=null] - Domain to connect to
+     * @param {string} [options.password=null] - Password with which to connect. Can also be password generated from token.
+     * @param {string} [options.loginkey=null] - Key from already handled login. Overrides username/password.
+     * @param {string} [options.proxy=null] - "url:port" to use for proxy server
+     * @param {string} [options.token=null] - Login token. This appears to be superfluous
+     * @returns {Session} Instance of Session
+     */
     constructor(url, {user=null, domain=null, password=null, loginkey=null, proxy=null, token=null}) {
         if (url.length < 5 || (!url.startsWith('wss://') && (!url.startsWith('ws://')))) {
             throw Error("Invalid URL")
@@ -183,6 +316,18 @@ class Session {
         this.alive = false
     }
 
+    /**
+     * Factory for Session
+     * @param {string} url - URL of meshcentral server to connect to. Should start with either "ws://" or "wss://".
+     * @param {Object} [options={}] - Optional arguments for instantiation
+     * @param {string} [options.user=null] - Username of to use for connecting. Can also be username generated from token.
+     * @param {string} [options.domain=null] - Domain to connect to
+     * @param {string} [options.password=null] - Password with which to connect. Can also be password generated from token.
+     * @param {string} [options.loginkey=null] - Key from already handled login. Overrides username/password.
+     * @param {string} [options.proxy=null] - "url:port" to use for proxy server
+     * @param {string} [options.token=null] - Login token. This appears to be superfluous
+     * @returns {Session} Instance of Session which has been initialized
+     */
     static async create(...args) {
         let s = new this(...args)
         await s.initialized
@@ -223,10 +368,10 @@ class Session {
     }
 
     _receive_message(raw_data) {
-        // console.log("message")
+        console.log("message")
         var data = null;
         data = JSON.parse(raw_data)
-        // console.log(data)
+        console.log(data)
         if (data.action == "serverinfo") {
             this._currentDomain = data.serverinfo.domain;
             this._server_info = data.serverinfo
@@ -240,8 +385,8 @@ class Session {
         if (data.action == "event" || data.action == "msg" || data.action == "interuser") {
             this._eventer.emit("server_event", data)
         }
-        if (data.responseid) {
-            this._eventer.emit(data.responseid, data)
+        if (data.responseid || data.tag) {
+            this._eventer.emit(data.responseid || data.tag, data)
         }
         else {
             // Some events don't user their response id, they just have the action. This should be fixed eventually.
@@ -262,14 +407,25 @@ class Session {
         return this._command_id
     }
 
+    /**
+     * Close Session
+     */
     close() {
         this._sock.close()
     }
 
+    /**
+     * Get server information
+     * @return {Promise} Promise for object containing server info
+     */
     async server_info() {
         return this._server_info
     }
 
+    /**
+     * Get user information
+     * @return {Promise} Promise for object containing user info
+     */
     async user_info() {
         return this._user_info
     }
@@ -285,7 +441,7 @@ class Session {
                 resolve(data)
             })
         })
-        this._sock.send(JSON.stringify(Object.assign({}, data, { responseid: id })))
+        this._sock.send(JSON.stringify(Object.assign({}, data, { tag: id, responseid: id })))
         return p
     }
 
@@ -301,60 +457,118 @@ class Session {
         return p
     }
 
+    /** 
+     * Send an invite email for a group or mesh
+     * @param {string} group - Name of mesh to which to invite email
+     * @param {string} email - Email of user to invite
+     * @param {Object} [options={}]
+     * @param {string} [options.name=null] - User's name. For display purposes.
+     * @param {string} [options.message=null] - Message to send to user in invite email
+     * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async send_invite_email(group, email, {name=null, message=null, meshid=null}={}){
         var op = { action: 'inviteAgent', email: email, name: '', os: '0' }
         if (meshid) { op.meshid = meshid } else if (group) { op.meshname = group }
         if (name) { op.name = name }
         if (message) { op.msg = message }
-        return this._send_command(op, "send_invite_email")
+        return this._send_command(op, "send_invite_email").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
+    /** 
+     * Generate an invite link for a group or mesh
+     * @param {string} group - Name of group to add
+     * @param {number} hours - Hours until link expires
+     * @param {Object} [options={}]
+     * @param {MESHRIGHTS} [options.flags=null] - Bitwise flags for MESHRIGHTS
+     * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
+     * @return {Promise} Promise for invite link information
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async generate_invite_link(group, hours, {flags=null, meshid=null}={}) {
         var op = { action: 'createInviteLink', expire: hours, flags: 0 }
         if (meshid) { op.meshid = meshid; } else if (group) { op.meshname = group; }
-        if (flags) { op.flags = flags; }
-        return this._send_command(op, "generate_invite_link")
-    }
-
-    async list_users() {
-        return this._send_command({action: "users"}, "list_users")
-    }
-
-    async list_user_sessions() {
-        return this._send_command({action: "socketsessioncount"}, "list_user_sessions")
-    }
-
-    async list_user_groups() {
-        return this._send_command({action: "usergroups"}, "list_user_groups")
-    }
-
-    async list_device_groups() {
-        // Hack, fix when meshes returns responseid
-        let p = new Promise((resolve, reject)=>{
-            this._eventer.once("meshes", (data)=>{
-                resolve(data)
-            })
+        if (flags !== null) { op.flags = flags; }
+        return this._send_command(op, "generate_invite_link").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            delete data.tag
+            delete data.responseid
+            delete data.action
+            return data
         })
-        this._send_command({action: "meshes"}, "list_device_groups")
-        return p
     }
 
+    /**
+     * List users on server. Admin Only.
+     * @returns {Promise} Promise represents a list of users
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async list_users() {
+        return this._send_command({action: "users"}, "list_users").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return data.users
+        })
+    }
+
+    /**
+     * Get list of connected users. Admin Only.
+     * @returns {Promise} Promise for a list of user sessions
+     */
+    async list_user_sessions() {
+        return this._send_command({action: "wssessioncount"}, "list_user_sessions").then((data)=>{
+            return data.wssessions
+        })
+    }
+
+    /**
+     * Get user groups. Admin will get all user groups, otherwise get limited user groups
+     * @returns {Promise} Promise for a list of groups, or null if no groups are found
+     */
+    async list_user_groups() {
+        return this._send_command({action: "usergroups"}, "list_user_groups").then((data)=>{
+            return data.ugroups
+        })
+    }
+
+    /**
+     * Get device groups. Only returns meshes to which the logged in user has access
+     * @returns {Promise} Promise for a list of meshes
+     */
+    async list_device_groups() {
+        return this._send_command({action: "meshes"}, "list_device_groups").then((data)=>{
+            return data.meshes
+        })
+    }
+
+    /**
+     * Get devices to which the user has access.
+     * @param {Object} [options={}]
+     * @param {boolean} [options.details=false] - Get device details
+     * @param {string} [options.group=null] - Get devices from specific group by name. Overrides meshid
+     * @param {string} [options.meshid=null] - Get devices from specific group by id
+     * @returns {Promise} Promise for a list of nodes
+     */
     async list_devices({details=false, group=null, meshid=null}={}) {
         let command_list = []
         if (details) {
             command_list.push(this._send_command({action: "getDeviceDetails", type:"json"}, "list_devices"))
         } else if (group) {
-            // command_list.push(this._send_command({ action: 'nodes', meshname: group}, "list_devices"))
-            command_list.push(this._send_command_no_response_id({ action: 'nodes', meshname: group }))
+            command_list.push(this._send_command({ action: 'nodes', meshname: group}, "list_devices"))
         } else if (meshid) {
-            // command_list.push(this._send_command({ action: 'nodes', meshid: meshid}, "list_devices"))
-            command_list.push(this._send_command_no_response_id({ action: 'nodes', meshid: meshid }))
+            command_list.push(this._send_command({ action: 'nodes', meshid: meshid}, "list_devices"))
         } else {
-            // Hack, fix when meshes returns responseid
-            // command_list.push(this._send_command({ action: 'meshes' }, "list_devices"))
-            // command_list.push(this._send_command({ action: 'nodes' }, "list_devices"))
-            command_list.push(this._send_command_no_response_id({ action: 'meshes' }))
-            command_list.push(this._send_command_no_response_id({ action: 'nodes' }))
+            command_list.push(this._send_command({ action: 'meshes' }, "list_devices"))
+            command_list.push(this._send_command({ action: 'nodes' }, "list_devices"))
             
         }
         return await Promise.all(command_list).then((args)=>{
@@ -383,22 +597,17 @@ class Session {
         })
     }
 
-    async list_users_of_device_group(meshid) {
-        // Hack, fix when meshes returns responseid
-        //return await this._send_command({ action: 'meshes' }, "list_users_of_device_group").then(data)=>{
-        return await this._send_command_no_response_id({ action: 'meshes' }).then((data)=>{
-            for (var i in data.meshes) {
-                const m = data.meshes[i];
-                const mid = m._id.split('/')[2]
-                if (mid == meshid) {
-                    return m.links
-                }
-            }
-            throw Error("Group ID not found")
-        })
-    }
+    /**
+     * @callback Session~EventCallback
+     * @param {Object} data - Raw event data from the server
+     */
 
-    // Return f so we can stop listening to this if needed
+    /**
+     * Listen to events from the server
+     * @param {Session~EventCallback} f - Function to call when an event occurs
+     * @param {Object} [filter=null] - Object to filter events with. Only trigger for events that deep-match this object. Use sets for "array.contains" and arrays for equality of lists.
+     * @return {function} - Function used for listening. Use this to stop listening to events if you want that.
+     */
     listen_to_events(f, filter=null) {
         let f2 = (data)=>{
             if (filter) {
@@ -413,12 +622,23 @@ class Session {
         return f2
     }
 
-    // Uses the function returned from listen_to_events
+    /**
+     * Stop listening to server events
+     * @param {function} Callback to stop listening with.
+     */
     stop_listening_to_events(f) {
         this._eventer.off("server_event", f)
     }
 
-    async list_events({userid=null, nodeid=null, limit=null}) {
+    /** 
+     * List events visible to the currect user
+     * @param {Object} [options={}]
+     * @param {string} [options.userid=null] - Filter by user. Overrides nodeid.
+     * @param {string} [options.nodeid=null] - Filter by node
+     * @param {number} [options.limit=null] - Limit to the N most recent events
+     * @return {Promise} Promise for a list of events
+     */
+    async list_events({userid=null, nodeid=null, limit=null}={}) {
         if ((typeof limit != 'number') || (limit < 1)) { limit = null; }
 
         let cmd = null;
@@ -430,21 +650,82 @@ class Session {
             cmd = { action: 'events' }
         }
         if (typeof limit == 'number') { cmd.limit = limit; }
-        return this._send_command(cmd, "list_events")
+        return this._send_command(cmd, "list_events").then((d)=>{
+            return d.events
+        })
     }
 
+    /** 
+     * List login tokens for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @return {Promise} Promise for a list of tokens
+     */
+    async list_login_tokens() {
+        return this._send_command_no_response_id({ action: 'loginTokens' }).then((data)=>{
+            return data.loginTokens
+        })
+    }
+
+    /** 
+     * Create login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string} name - Name of token
+     * @param {number} [expire=null] - Minutes until expiration. 0 or null for no expiration.
+     * @return {Promise} Promise for the created token
+     */
     async add_login_token(name, expire=null) {
         let cmd = { action: 'createLoginToken', name: name, expire: 0 }
         if (expire) { cmd.expire = expire }
-        return this._send_command(cmd, "add_login_token")
+        return this._send_command_no_response_id(cmd).then((data)=>{
+            let d = Object.assign({}, data)
+            delete d.action
+            return d
+        })
         
     }
 
-    async remove_login_token(name) {
-        return this._send_command({ action: 'loginTokens', name: name }, "remove_login_token")
+    /** 
+     * Remove login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string} name - Name of token or token username
+     * @return {Promise} Promise for the list of remaining tokens
+     */
+    async remove_login_token(names) {
+        if (typeof names === "string") {
+            names = [names]
+        }
+        let realnames = []
+        let tokens = await this.list_login_tokens()
+        for (let name of names) {
+            if (!name.startsWith("~")) {
+                for (let token of tokens) {
+                    if (token.name === name) {
+                        name = token.tokenUser
+                        break
+                    }
+                }
+            }
+            realnames.push(name)
+        }
+        return this._send_command_no_response_id({ action: 'loginTokens', remove: realnames }).then((data)=>{
+            return data.loginTokens
+        })
     }
 
-    async add_user(name, password, randompass, {domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}) {
+    /** 
+     * Add a new user
+     * @param {string} name - username
+     * @param {string} password - user's starting password
+     * @param {Object} [options={}]
+     * @param {boolean} [options.randompass=false] - Generate a random password for the user. Overrides password
+     * @param {string} [options.domain=null] - Domain to which to add the user
+     * @param {string} [options.email=null] - User's email address
+     * @param {boolean} [options.emailverified=false] - Pre-verify the user's email address
+     * @param {boolean} [options.resetpass=false] - Force the user to reset their password on first login
+     * @param {string} [options.realname=null] - User's real name
+     * @param {string} [options.phone=null] - User's phone number
+     * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async add_user(name, password, {randompass=false, domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}={}) {
         // Rights uses USERRIGHTS
         if (randompass) { password = this._getRandomAmtPassword() }
         let op = { action: 'adduser', username: name, pass: password };
@@ -456,15 +737,34 @@ class Session {
         if (phone === true) { op.phone = ''; }
         if (typeof phone == 'string') { op.phone = phone }
         if (typeof realname == 'string') { op.realname = realname }
-        return this._send_command(op, "add_user")
+        return this._send_command(op, "add_user").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
+    /** 
+     * Edit an existing user
+     * @param {string} userid - Unique userid
+     * @param {Object} [options={}]
+     * @param {string} [options.domain=null] - Domain to which to add the user
+     * @param {string} [options.email=null] - User's email address
+     * @param {boolean} [options.emailverified=false] - Verify or unverify the user's email address
+     * @param {boolean} [options.resetpass=false] - Force the user to reset their password on next login
+     * @param {string} [options.realname=null] - User's real name
+     * @param {string} [options.phone=null] - User's phone number
+     * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async edit_user(userid, {domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}) {
         // Rights uses USERRIGHTS
         if ((domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + domain + '/' + userid; }
         else if ((this._domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + this._domain + '/' + userid; }
         let op = { action: 'edituser', userid: userid};
-        if (email) { op.email = email; if (emailverified) { op.emailVerified = true; } }
+        if (email !== null) { op.email = email; if (emailverified) { op.emailVerified = true; } }
         if (resetpass) { op.resetNextLogin = true; }
         if (rights !== null) { op.siteadmin = rights; }
         if (domain) { op.domain = domain; }
@@ -473,110 +773,224 @@ class Session {
         if (typeof phone == 'string') { op.phone = phone; }
         if (typeof realname == 'string') { op.realname = realname; }
         if (realname === true) { op.realname = ''; }
-        return this._send_command(op, "edit_user")
-    }
-
-    async remove_user(userid) {
-        if ((this._domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + this._domain + '/' + userid; }
-        return this._send_command({ action: 'deleteuser', userid: userid }, "remove_user")
-    }
-
-    async add_user_group(name, description=null) {
-        let op = { action: 'createusergroup', name: name, desc: desc };
-        if (this._domain) { op.domain = this._domain }
-        return this._send_command(op, "add_user_group")
-    }
-
-    async remove_user_group(groupid) {
-        let ugrpid = groupid;
-        if ((this._domain != null) && (userid.indexOf('/') < 0)) { ugrpid = 'ugrp/' + this._domain + '/' + ugrpid; }
-        return this._send_command({ action: 'deleteusergroup', ugrpid: ugrpid }, "remove_user_group")
-    }
-
-    async add_to_user_group(id, groupid, rights=null) {
-        // rights uses MESHRIGHTS
-
-
-        var ugrpid = groupid;
-
-        if ((this._domain != null) && (id.indexOf('/') < 0)) { ugrpid = 'ugrp/' + this._domain + '/' + ugrpid; }
-
-        if ((id != null) && (id.startsWith('user/'))) {
-            return this._send_command({ action: 'addusertousergroup', ugrpid: ugrpid, usernames: [id.split('/')[2]]}, "add_to_user_group")
-        }
-
-        rights = rights || 0
-
-        if ((id != null) && (id.startsWith('mesh/'))) {
-            return this._send_command({ action: 'addmeshuser', meshid: id, userid: ugrpid, meshadmin: rights}, "add_to_user_group")
-        }
-
-        if ((id != null) && (id.startsWith('node/'))) {
-            return this._send_command({ action: 'adddeviceuser', nodeid: id, userids: [ugrpid], rights: rights}, "add_to_user_group")
-        }
-    }
-
-    async remove_from_user_group(id, groupid) {
-        var ugrpid = groupid;
-
-        if ((this._domain != null) && (id.indexOf('/') < 0)) { ugrpid = 'ugrp/' + this._domain + '/' + ugrpid; }
-
-        if ((id != null) && (id.startsWith('user/'))) {
-            return this._send_command({ action: 'removeuserfromusergroup', ugrpid: ugrpid, userid: id }, "remove_from_user_group")
-        }
-
-        if ((id != null) && (id.startsWith('mesh/'))) {
-            return this._send_command({ action: 'removemeshuser', meshid: id, userid: ugrpid }, "remove_from_user_group")
-        }
-
-        if ((id != null) && (id.startsWith('node/'))) {
-            return this._send_command({ action: 'adddeviceuser', nodeid: id, userids: [ugrpid], rights: 0, remove: true }, "remove_from_user_group")
-        }
-    }
-
-    async remove_all_users_from_user_group(groupid) {
-        let ugrpid = groupid
-        return this.list_user_groups().then((data)=>{
-            // if ((this._domain != null) && (this._userid.indexOf('/') < 0)) { ugrpid = 'ugrp/' + this._domain + '/' + ugrpid; }
-            let ugroup = data.ugroups[ugrpid]
-            if (ugroup == null) {
-                return {"response": "failure"}
-            } else {
-                let responses = []
-                if (ugroup.links) {
-                    for (let link_name of ugroup.links) {
-                        if (link_name.startsWith('user/')) {
-                            responses.push(this.remove_from_user_group(link_name, ugrpid))
-                        }
-                    }
-                }
-                if (!responses.length) { 
-                    return {"response": "failure"} 
-                }
-                return Promise.all(responses)
+        return this._send_command(op, "edit_user").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
             }
+            return true
         })
     }
 
-    async add_device_group(name, {description="", amtonly=false, features=0, consent=0}) {
+    /** 
+     * Remove an existing user
+     * @param {string} userid - Unique userid
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async remove_user(userid) {
+        if ((this._domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + this._domain + '/' + userid; }
+        return this._send_command({ action: 'deleteuser', userid: userid }, "remove_user").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
+    }
+
+    /** 
+     * Create a new user group
+     * @param {string} name - Name of usergroup
+     * @param {string} [description=null] - Description of user group
+     * @return {Promise} Promise for the new user group
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async add_user_group(name, description=null) {
+        let op = { action: 'createusergroup', name: name, desc: description };
+        if (this._domain) { op.domain = this._domain }
+        return this._send_command(op, "add_user_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            delete data.action
+            delete data.responseid
+            delete data.result
+            return data
+        })
+    }
+
+    /** 
+     * Remove an existing user group
+     * @param {string} userid - Unique userid
+     * @return {Promise} Promise for the new user group
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async remove_user_group(groupid) {
+        if ((this._domain != null) && (userid.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
+        if (!groupid.startsWith("ugrp/")) {
+            groupid = `ugrp//${groupid}`
+        }
+        return this._send_command({ action: 'deleteusergroup', ugrpid: groupid }, "remove_user_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
+    }
+
+    /** 
+     * Add user(s) to an existing user group. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string|array} ids - Unique user id(s)
+     * @param {string} groupid - Group to add the given user to
+     * @return {Promise} Promise for a list of users that were successfully added
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async add_users_to_user_group(userids, groupid) {
+        if (typeof userids === "string") {
+            userids = [userids]
+        }
+        if ((this._domain != null) && (id.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
+        if (!groupid.startsWith("ugrp/")) {
+            groupid = `ugrp//${groupid}`
+        }
+        return new Promise((resolve, reject)=>{
+            let l = this.listen_to_events((data)=>{
+                resolve(data.event.msgArgs[0])
+                this.stop_listening_to_events(l)
+            }, {"event": {"etype":"ugrp"}})
+            this._send_command({ action: 'addusertousergroup', ugrpid: groupid, usernames: userids}, "add_users_to_user_group").then((data)=>{
+                if (data.result && data.result.toLowerCase() !== "ok") {
+                    reject(new ServerError(data.result))
+                }
+
+            })
+        })
+    }
+
+    /** 
+     * Remove user from an existing user group
+     * @param {string} id - Unique user id
+     * @param {string} groupid - Group to remove the given user from
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async remove_user_from_user_group(userid, groupid) {
+        if ((this._domain != null) && (id.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
+        if (!groupid.startsWith("ugrp/")) {
+            groupid = `ugrp//${groupid}`
+        }
+        return this._send_command({ action: 'removeuserfromusergroup', ugrpid: groupid, userid: userid }, "remove_from_user_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
+    }
+
+    /** 
+     * Add a user to an existing node
+     * @param {string|array} userids - Unique user id(s)
+     * @param {string} nodeid - Node to add the given user to
+     * @param {MESHRIGHTS} [rights=null] - Bitwise mask for the rights on the given mesh
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async add_users_to_device(userids, nodeid, rights=null) {
+        if (typeof userids === "string") {
+            userids = [userids]
+        }
+        userids = userids.map((u)=>u.startsWith("user//") ? u : `user//${u}`)
+        rights = rights || 0
+        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, userids: userids, rights: rights}, "add_users_to_device").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
+    }
+
+    /** 
+     * Remove users from an existing node
+     * @param {string} nodeid - Node to remove the given users from
+     * @param {string|array} userids - Unique user id(s)
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async remove_users_from_device(nodeid, userids) {
+        if (typeof(userids) === "string") { userids = [userids] }
+        userids = userids.map((u)=>u.startsWith("user//") ? u : `user//${u}`)
+        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, usernames: userids, rights: 0, remove: true }, "remove_users_from_device").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
+    }
+
+    /** 
+     * Create a new device group
+     * @param {string} name - Name of device group
+     * @param {Object} [options={}]
+     * @param {string} [options.description=""] - Description of device group
+     * @param {boolean} [options.amtonly=false] - 
+     * @param {MESHFEATURES} [options.features=0] - Bitwise features to enable on the group
+     * @param {CONSENTFLAGS} [options.consent=0] - Bitwise consent flags to use for the group
+     * @return {Promise} Promise for the new device group
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async add_device_group(name, {description="", amtonly=false, features=0, consent=0}={}) {
         var op = { action: 'createmesh', meshname: name, meshtype: 2 };
         if (description) { op.desc = description; }
         if (amtonly) { op.meshtype = 1 }
         if (features) { op.flags = features }
         if (consent) { op.consent = consent }
-        return this._send_command(op, "add_device_group")
+        return this._send_command(op, "add_device_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            delete data.result
+            delete data.action
+            delete data.responseid
+            return data
+        })
     }
 
+    /** 
+     * Remove an existing device group
+     * @param {string} meshid - Unique id of device group
+     * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async remove_device_group(meshid, isname=false) {
         var op = { action: 'deletemesh', meshid: meshid};
         if (isname) {
             op.meshname = meshid
             delete op.meshid
         }
-        return this._send_command(op, "remove_device_group")
+        return this._send_command(op, "remove_device_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
-    async edit_device_group(meshid, {isname=false, name=null, description=null, flags=null, consent=null, invite_codes=null, backgroundonly=false, interactiveonly=false}) {
+    /** 
+     * Edit an existing device group
+     * @param {string} meshid - Unique id of device group
+     * @param {Object} [options={}]
+     * @param {boolean} [options.isname=false] - treat "meshid" as a name instead of an id
+     * @param {string} [options.name=null] - New name for group
+     * @param {boolean} [options.description=null] - New description
+     * @param {MESHFEATURES} [options.flags=null] - Features to enable on the group
+     * @param {CONSENTFLAGS} [options.consent=null] - Which consent flags to use for the group
+     * @param {string[]} [options.invite_codes=null] - Create new invite codes
+     * @param {boolean} [options.backgroundonly=false] - Flag for invite codes
+     * @param {boolean} [options.interactiveonly=false] - Flag for invite codes
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async edit_device_group(meshid, {isname=false, name=null, description=null, flags=null, consent=null, invite_codes=null, backgroundonly=false, interactiveonly=false}={}) {
         var op = { action: 'editmesh', meshid: meshid};
         if (isname) {
             op.meshname = meshid
@@ -597,74 +1011,142 @@ class Session {
         if (consent != null) {
             op.consent = consent
         }
-        return this._send_command(op, "edit_device_group")
+        return this._send_command(op, "edit_device_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
-    async move_to_device_group(meshid, nodeids, isname=false) {
+    /** 
+     * Move a device from one group to another
+     * @param {string|array} nodeids - Unique node id(s)
+     * @param {string} meshid - Unique mesh id
+     * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
+     * @return {Promise} Promise for true if it succeeds
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async move_to_device_group(nodeids, meshid, isname=false) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
         var op = { action: 'changeDeviceMesh', nodeids: nodeids, meshid: meshid };
         if (isname) {
             op.meshname = meshid
             delete op.meshid
         }
-        return this._send_command(op, "move_to_device_group")
+        return this._send_command(op, "move_to_device_group").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
-    async add_users_to_device_group(meshid, userids, {isname=false, rights=0}) {
-        // Rights = MESHRIGHTS
-        if (typeof(userids) === "string") { userids = [userids] }
-        var op = { action: 'addmeshuser', usernames: userids, meshadmin: rights, meshid: meshid };
+    /** 
+     * Add a user to an existing mesh
+     * @param {string|array} userids - Unique user id(s)
+     * @param {string} meshid - Mesh to add the given user to
+     * @param {Object} [options={}]
+     * @param {boolean} [options.isname=false] - Read meshid as a name rather than an id
+     * @param {MESHRIGHTS} [options.rights=0] - Bitwise mask for the rights on the given mesh
+     * @return {Promise<object>} Object showing which were added correctly and which were not, along with their result messages
+     */
+    async add_users_to_device_group(userids, meshid, {isname=false, rights=0}={}) {
+        if (typeof userids === "string") {
+            userids = [userids]
+        }
+        let original_ids = userids
+        userids = userids.map((u)=>u.startsWith("user//") ? u : `user//${u}`)
+        var op = { action: 'addmeshuser', userids: userids, meshadmin: rights, meshid: meshid };
         if (isname) {
             op.meshname = meshid
             delete op.meshid
         }
-        return this._send_command(op, "add_user_to_device_group")
+        return this._send_command(op, "add_user_to_device_group").then((data)=>{
+            let results = data.result.split(",")
+            let out = {}
+            for (let [i, result] of results.entries()) {
+                if (!i in original_ids) {
+                    out["all"] = result
+                } else {
+                    out[original_ids[i]] = {
+                        success: result.startsWith("Added user"),
+                        message: result
+                    }
+                }
+            }
+            return out
+        })
     }
 
-    async remove_users_from_device_group(meshid, userids, isname=false) {
+    /** 
+     * Remove users from an existing mesh
+     * @param {string|array} userids - Unique user id(s)
+     * @param {string} meshid - Mesh to add the given user to
+     * @param {boolean} [isname=false] - Read meshid as a name rather than an id
+     * @return {Promise<Object>} Object showing which were removed correctly and which were not
+     */
+    async remove_users_from_device_group(userids, meshid, isname=false) {
         let requests = []
-        let id_obj = {}
+        let id_obj = {meshid: meshid}
         if (isname) {
             id_obj.meshname = meshid
             delete id_obj.meshid
         }
         if (typeof(userids) === "string") { 
-            return this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userids }, id_obj), "remove_users_from_device_group")
+            userids = [userids]
         }
         for (let userid of userids) {
-            requests.push(this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userids }, id_obj), "remove_users_from_device_group"))
+            requests.push(this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userid }, id_obj), "remove_users_from_device_group"))
         }
-        return Promise.all(requests)
+        return Promise.all(requests).then((results)=>{
+            let out = {}
+            for (let [i, result] of results.entries()) {
+                if (result.result === "ok") {
+                    out[userids[i]] = {success: true}
+                } else {
+                    out[userids[i]] = {success: false}
+                }
+                out[userids[i]].message = result.result
+            }
+            return out
+        })
     }
 
-    async add_users_to_device(nodeid, userids, rights=0) {
-        // Rights = MESHRIGHTS
-        if (typeof(userids) === "string") { userids = [userids] }
-        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, usernames: [args.userid], rights: rights }, "add_users_to_device")
-    }
-
-    async remove_users_from_device(nodeid, userids) {
-        if (typeof(userids) === "string") { userids = [userids] }
-        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, usernames: userids, rights: 0, remove: true }, "remove_users_from_device")
-    }
-
-    async broadcast(message, {userid=null}) {
+    /**
+     * Broadcast a message to all users or a single user
+     * @param {string} message - Message to broadcast
+     * @param {string} [userid=null] - Optional user to which to send the message
+     * @return {Promise<boolean>} True if successful
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async broadcast(message, userid=null) {
         var op = { action: 'userbroadcast', msg: message };
         if (userid) { op.userid = userid }
-        return this._send_command(op, "broadcast")
+        return this._send_command(op, "broadcast").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
+    /** Get all info for a given device. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string} nodeid - Unique id of desired node
+     * @returns {Promise} Object containing all meaningful device info
+     * @throws {ValueError} `Invalid device id` if device is not found
+     */
     async device_info(nodeid) {
         let requests = []
-        // All of these are broken
-        // requests.push(this._send_command({ action: 'nodes' }, "device_info"))
+
+        requests.push(this._send_command({ action: 'nodes' }, "device_info"))
+        // requests.push(this._send_command_no_response_id({ action: "nodes" }))
         // requests.push(this._send_command({ action: 'getnetworkinfo', nodeid: nodeid }, "device_info"))
-        // requests.push(this._send_command({ action: 'lastconnect', nodeid: nodeid }, "device_info"))
-        // requests.push(this._send_command({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }, "device_info"))
-        requests.push(this._send_command_no_response_id({ action: "nodes" }))
         requests.push(this._send_command_no_response_id({ action: 'getnetworkinfo', nodeid: nodeid }))
+        // requests.push(this._send_command({ action: 'lastconnect', nodeid: nodeid }, "device_info"))
         requests.push(this._send_command_no_response_id({ action: 'lastconnect', nodeid: nodeid }))
-        requests.push(this._send_command_no_response_id({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }))
+        requests.push(this._send_command({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }, "device_info"))
+        // requests.push(this._send_command_no_response_id({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }))
         return Promise.all(requests).then(([nodes, network, lastconnect, sysinfo])=>{
             let node = null
             if (sysinfo != null && (sysinfo.node != null)) {
@@ -679,7 +1161,7 @@ class Session {
                 }
             }
             if (node == null) {
-                return {"response": "failure", "message": "Invalid device id"}
+                throw new ValueError("Invalid device id")
             }
 
             if (lastconnect != null) { node.lastconnect = lastconnect.time; node.lastaddr = lastconnect.addr; }
@@ -687,57 +1169,164 @@ class Session {
         })
     }
 
+
+    /** Edit properties of an existing device
+     * @param {string} nodeid - Unique id of desired node
+     * @param {Object} [options={}]
+     * @param {string} [options.name=null] - New name for device
+     * @param {string} [options.description=null] - New description for device
+     * @param {string|string[]} [options.tags=null] - New tags for device
+     * @param {ICON} [options.icon=null] - New icon for device
+     * @param {CONSENTFLAGS} [options.consent=null] - New consent flags for device
+     * @returns {Promise<boolean>} True if successful
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async edit_device(nodeid, {name=null, description=null, tags=null, icon=null, consent=null}={}) {
-        // consent = CONSENTFLAGS
         let op = { action: 'changedevice', nodeid: nodeid };
         if (name !== null) { op.name = name }
         if (description !== null) { op.desc = description }
         if (tags !== null) { op.tags = tags }
         if (icon !== null) { op.icon = icon }
         if (consent !== null) { op.consent = consent }
-        return this._send_command(op, "edit_device")
+        return this._send_command(op, "edit_device").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
+    /** Run a command on any number of nodes. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string|string[]} nodeids - Unique ids of nodes on which to run the command
+     * @param {string} command - Command to run
+     * @param {Object} [options={}]
+     * @param {boolean} [options.powershell=false] - Use powershell to run command. Only available on Windows.
+     * @param {boolean} [options.runasuser=false] - Attempt to run as a user instead of the root permissions given to the agent. Fall back to root if we cannot.
+     * @param {boolean} [options.runasuseronly=false] - Error if we cannot run the command as the logged in user.
+     * @returns {Promise<Object>} Object containing mapped output of the commands by device
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async run_command(nodeids, command, {powershell=false, runasuser=false, runasuseronly=false}={}) {
         let runAsUser = 0;
-        if (runasuser) { runAsUser = 1; } else if (runasuseronly) { runAsUser = 2; }
+        if (runasuser) { runAsUser = 1; }
+        if (runasuseronly) { runAsUser = 2; }
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command")
+        let match_nodeid = (id, ids)=>{
+            for (let nid of ids) {
+                if (nid === id) {
+                    return nid
+                }
+                if (nid.slice(6) === id) {
+                    return nid
+                }
+                if (`node//${nid}` === id) {
+                    return nid
+                }
+            }
+        }
+        return new Promise((resolve, reject)=>{
+            let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]))
+            let l = this.listen_to_events((data)=>{
+                if (data.value === "Run commands completed.") {
+                    result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true})
+                    if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
+                        resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])))
+                        this.stop_listening_to_events(l)
+                    }
+                } else if (data.value.startsWith("Run commands")) {
+                    return
+                }
+                result[match_nodeid(data.nodeid, nodeids)].result.push(data.value)
+            }, {action: "msg", type: "console"})
+            this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command").then((data)=>{
+                if (data.result && data.result.toLowerCase() !== "ok") {
+                    reject(new ServerError(data.result))
+                }
+            })
+        })
     }
 
+    /** Open a terminal shell on the given device
+     * @param {string} nodeid - Unique id of node on which to open the shell
+     * @returns {Promise<_Shell>} Newly created and initialized _Shell
+     */
     async shell(nodeid) {
         return await _Shell.create(this, nodeid)
     }
 
+    /** Open a smart terminal shell on the given device
+     * @param {string} nodeid - Unique id of node on which to open the shell
+     * @param {regex} regex - Regex to watch for to signify that the shell is ready for new input.
+     * @returns {Promise<_SmartShell>} Newly created and initialized _SmartShell
+     */
     async smart_shell(nodeid, regex) {
         let shell = await this.shell()
         return await _SmartShell.create(shell, regex)
     }
 
+    /** Wake up given devices
+     * @param {string|string[]} nodeids - Unique ids of nodes which to wake
+     * @returns {Promise<boolean>} True if successful
+     */
     async wake_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'wakedevices', nodeids: nodeids }, "wake_devices")
+        return this._send_command({ action: 'wakedevices', nodeids: nodeids }, "wake_devices").then((data)=>{
+
+        })
     }
 
+    /** Reset given devices
+     * @param {string|string[]} nodeids - Unique ids of nodes which to reset
+     * @returns {Promise<boolean>} True if successful
+     */
     async reset_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
         return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 3 }, "reset_devices")
     }
 
+    /** Sleep given devices
+     * @param {string|string[]} nodeids - Unique ids of nodes which to sleep
+     * @returns {Promise<boolean>} True if successful
+     */
     async sleep_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
         return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 4 }, "sleep_devices")
     }
 
+    /** Power off given devices
+     * @param {string|string[]} nodeids - Unique ids of nodes which to power off
+     * @returns {Promise<boolean>} True if successful
+     */
     async power_off_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
         return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 2 }, "power_off_devices")
     }
 
-    async list_device_shares(nodenodeid) {
-        return this._send_command({ action: 'deviceShares', nodeid: nodeid }, "list_device_shares")
+    /** List device shares of given node. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string} nodeid - Unique id of nodes of which to list shares
+     * @returns {Promise<Object[]>} Array of objects representing device shares
+     */
+    async list_device_shares(nodeid) {
+        return this._send_command_no_response_id({ action: 'deviceShares', nodeid: nodeid }).then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return data.deviceShares
+        })
     }
 
+    /** Add device share to given node. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string} nodeid - Unique id of nodes of which to list shares
+     * @param {string} name - Name of guest with which to share
+     * @param {Object} [options={}]
+     * @param {SHARINGTYPE} [options.type=SHARINGTYPE.desktop] - Type of share thise should be
+     * @param {CONSENTFLAGS} [options.consent=null] - Consent flags for share. Defaults to "notify" for your given SHARINGTYPE
+     * @param {number|Date} [options.start=new Date()] - When to start the share
+     * @param {number|Date} [options.end=null] - When to end the share. If null, use duration instead
+     * @param {number} [options.duration=60*60] - Duration in seconds for share to exist
+     * @returns {Promise<Object>} Info about the newly created share
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async add_device_share(nodeid, name, {type=SHARINGTYPE.desktop, consent=null, start=null, end=null, duration=60*60}={}) {
         if (start === null) {
             start = new Date()
@@ -758,156 +1347,135 @@ class Session {
         if (end <= start) {
             throw Error("End time must be ahead of start time")
         }
-        return this._send_command({ action: 'createDeviceShareLink', nodeid: nodeid, guestname: name, p: SHARINGTYPENUM[type], consent: consent, start: start, end: end }, "add_device_share")
+        return this._send_command({ action: 'createDeviceShareLink', nodeid: nodeid, guestname: name, p: SHARINGTYPENUM[type], consent: consent, start: start, end: end }, "add_device_share").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            delete data.action
+            delete data.nodeid
+            delete data.tag
+            delete data.responseid
+            return data
+        })
     }
 
+    /** Remove a device share
+     * @param {string} nodeid - Unique node from which to remove the share
+     * @param {string} shareid - Unique share id to be removed
+     * @returns {Promise<boolean>} true if successful
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async remove_device_share(nodeid, shareid) {
-        return this._send_command({ action: 'removeDeviceShare', nodeid: nodeid, publicid: shareid }, "remove_device_share")
+        return this._send_command({ action: 'removeDeviceShare', nodeid: nodeid, publicid: shareid }, "remove_device_share").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
+    /** Open url in browser on device. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string} nodeid - Unique node from which to remove the share
+     * @param {string} url - url to open
+     * @returns {Promise<boolean>} true if successful
+     * @throws {ServerError} Error text from server if there is a failure
+     * @throws {Error} `Failed to open url` if failure occurs
+     */
     async device_open_url(nodeid, url) {
-        return this._send_command({ action: 'msg', type: 'openUrl', nodeid: nodeid, url: url }, "device_open_url")
+        return new Promise((resolve, reject)=>{
+            let l = this.listen_to_events((data)=>{
+                this.stop_listening_to_events(l)
+                if (data.success) {
+                    resolve(true)
+                } else {
+                    reject(new Error("Failed to open url"))
+                }
+            }, {type: "openUrl", url: url})
+            this._send_command({ action: 'msg', type: 'openUrl', nodeid: nodeid, url: url }, "device_open_url").then((data)=>{
+                if (data.result && data.result.toLowerCase() !== "ok") {
+                    reject(new ServerError(data.result))
+                }
+            })
+        })
     }
 
-    async device_message(nodeid, message, {title="MeshCentral"}={}) {
-        return this._send_command({ action: 'msg', type: 'messagebox', nodeid: nodeid, title: title, msg: message }, "device_message")
+    /** Display a message on remote device.
+     * @param {string} nodeid - Unique node from which to remove the share
+     * @param {string} message - message to display
+     * @param {string} [title="MeshCentral"] - message title
+     * @returns {Promise<boolean>} true if successful
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async device_message(nodeid, message, title="MeshCentral") {
+        return this._send_command({ action: 'msg', type: 'messagebox', nodeid: nodeid, title: title, msg: message }, "device_message").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return true
+        })
     }
 
-    async device_toast(nodeids, message, {title="MeshCentral"}={}) {
+    /** Popup a toast a message on remote device.
+     * @param {string|string[]} nodeids - Unique node from which to remove the share
+     * @param {string} message - message to display
+     * @param {string} [title="MeshCentral"] - message title
+     * @returns {Promise<boolean>} true if successful
+     * @throws {ServerError} Error text from server if there is a failure
+     * @todo This function returns true even if it fails, because the server tells us it succeeds before it actually knows, then later tells us it failed, but it's hard to find taht because it looks exactly like a success.
+     */
+    async device_toast(nodeids, message, title="MeshCentral") {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'toast', nodeids: nodeids, title: "MeshCentral", msg: message }, "device_toast")
+        return this._send_command({ action: 'toast', nodeids: nodeids, title: "MeshCentral", msg: message }, "device_toast").then((data)=>{
+            if (data.result && data.result.toLowerCase() !== "ok") {
+                throw new ServerError(data.result)
+            }
+            return data
+        })
     }
 
-    // This API is fire and forget
+    /** Fire off an interuser message. This is a fire and forget api, we have no way of checking if the user got the message.
+     * @param {serializable} data - Any sort of serializable data you want to send to the user
+     * @param {Object} [options={}]
+     * @param {string} [options.session=null] - Direct session to send to. Use this after you have made connection with a specific user session.
+     * @param {string} [options.user=null] - Send message to all sessions of a particular user. One of these must be set.
+     * @throws {ValueError} Value error if neither user nor session are given.
+     */
     interuser(data, {session=null, user=null}={}) {
         if (session === null && user === null) {
-            throw Error("No user or session given")
+            throw ValueError("No user or session given")
         }
         this._sock.send(JSON.stringify({action: "interuser", data: data, sessionid: session, userid: user}))
     }
 
-    _pack_number(number, bytes, {endianness="big"}={}) {
-        let buf = Buffer.alloc(bytes)
-        let adder = 1
-        let buf_start = 0
-        let buf_end = bytes-1
-        if (endianness === "big") {
-            adder = -1
-            buf_start = bytes-1
-            buf_end = 0
-        }
-        for (let i = buf_start; i != buf_end+adder; i+=adder) {
-            buf[i] = number&0xFF
-            number >>= 8
-        }
-        return buf
-    }
-
-    _unpack_number(buf, {endianness="big"}={}) {
-        let bytes = buf.length
-        let number = 0
-        let adder = 1
-        let buf_start = 0
-        let buf_end = bytes-1
-        let multiplier = 0
-        if (endianness === "big") {
-            adder = -1
-            buf_start = bytes-1
-            buf_end = 0
-        }
-        for (let i = buf_start; i != buf_end+adder; i+=adder) {
-            number += buf[i]<<multiplier
-            multiplier += 8
-        }
-        return number
-    }
-
-    async receive_interuser_file(sessionid, {target=null}={}) {
-        let passthrough = false
-        if (target===null) {
-            target = new stream.PassThrough()
-            passthrough = true
-        }
-        let file_id = this._get_command_id()
-        await this.interuser({fileid: file_id, command: "subreceivestart"}, {session: sessionid})
-        return new Promise((resolve, reject)=>{
-            let bytes_received = 0
-            let l = this.listen_to_events(async (event)=>{
-                if (data.slice(0, 6) == "fileid") {
-                    if (this._unpack_number(data.slice(6, 10)) !== file_id) {
-                        return
-                    }
-                }
-                let wdata = data.slice(12)
-                if (data[11] === 0) {
-                    bytes_received += wdata.length
-                    target.end(wdata)
-                    this.interuser(JSON.stringify({fileid: file_id, command: "subreceiveend"}), {session: sessionid})
-                    resolve({"bytes": bytes_received, "stream": target})
-                    this.stop_listening_to_events(l)
-                    return
-                }
-                bytes_received += wdata.length
-                target.write(wdata)
-                this.interuser(JSON.stringify({fileid: file_id, command: "subreceiveack"}), {session: sessionid})
-            }, {"action": "interuser"})
-        })
-    }
-
-    async send_interuser_file(sessionid, source) {
-        let outstream = new _SizeChunker(65564)
-        let file_id
-        let upload_queue = [new _Deferred()]
-        let first = true
-        return new Promise((resolve, reject)=>{
-            let l = this.listen_to_event(async (event)=>{
-                try {
-                    data = JSON.parse(event.data)
-                } catch (err) {
-                    return
-                }
-                if (data.command === "subreceivestart") {
-                    file_id = data.fileid
-                    outstream.on("data", (data)=>{
-                        data = Buffer.concat([Buffer.from([1]), data])
-                        upload_queue.at(-1).then(()=>{
-                            this.interuser(Buffer.concat([Buffer.from("fileid"), this._pack_number(file_id, 4), data]), {session: sessionid})
-                        })
-                        upload_queue.push(new _Deferred())
-                        if (first) {
-                            first = false
-                            upload_queue.shift().resolve()
-                        }
-                    })
-                    outstream.on("end", ()=>{
-                        upload_queue.at(-1).then(()=>{
-                            this.interuser(Buffer.concat([Buffer.from("fileid"), this._pack_number(file_id, 4), Buffer.from([0])]), {session: sessionid})
-                        })
-                    })
-                    source.pipe(outstream)
-                }
-                else if (data.command === "subreceiveack") {
-                    upload_queue.shift().resolve()
-                }
-                else if (data.command === "subreceiveend") {
-                    this.stop_listening_to_events(l)
-                    resolve()
-                }
-            }, {"action": "interuser"})
-        })
-    }
-
+    /** Upload a stream to a device. This creates an _File and destroys it every call. If you need to upload multiple files, use {@link Session#file_explorer} instead.
+     * @param {string} nodeid - Unique id to upload stream to
+     * @param {ReadableStream} source - ReadableStream from which to read data
+     * @param {string} target - Path which to upload stream to on remote device
+     * @returns {Promise<Object>} - {result: bool whether upload succeeded, size: number of bytes uploaded}
+     */
     async upload(nodeid, source, target) {
         let files = await this.file_explorer(nodeid)
         return files.upload(source, target)
     }
 
-    async upload_file(nodeid, filename, target) {
-        f = fs.createReadStream(filename)
+    /** Friendly wrapper around {@link Session#upload} to upload from a filepath. Creates a ReadableStream and calls upload.
+     * @param {string} nodeid - Unique id to upload file to
+     * @param {string} filepath - Path from which to read the data
+     * @param {string} target - Path which to upload file to on remote device
+     * @returns {Promise<Object>} - {result: bool whether upload succeeded, size: number of bytes uploaded}
+     */
+    async upload_file(nodeid, filepath, target) {
+        f = fs.createReadStream(filepath)
         return this.upload(nodeid, f, target)
     }
 
-    async download(nodeid, source, {target=null}={}) {
+    /** Download a file from a device into a writable stream. This creates an _File and destroys it every call. If you need to upload multiple files, use {@link Session#file_explorer} instead.
+     * @param {string} nodeid - Unique id to download file from
+     * @param {string} source - Path from which to download from device
+     * @param {WritableStream} [target=null] - Stream to which to write data. If null, create new PassThrough stream which is both readable and writable.
+     * @returns {Promise<WritableStream>} The stream which has been downloaded into
+     */
+    async download(nodeid, source, target=null) {
         let passthrough = false
         if (target===null) {
             target = new stream.PassThrough()
@@ -921,11 +1489,21 @@ class Session {
         })
     }
 
-    async download_file(nodeid, source, filename) {
-        let f = fs.createWriteStream(filename)
+    /** Friendly wrapper around {@link Session#download} to download to a filepath. Creates a WritableStream and calls download.
+     * @param {string} nodeid - Unique id to download file from
+     * @param {string} source - Path from which to download from device
+     * @param {string} filepath - Path to which to download data
+     * @returns {Promise<WritableStream>} The stream which has been downloaded into
+     */
+    async download_file(nodeid, source, filepath) {
+        let f = fs.createWriteStream(filepath)
         return this.download(nodeid, source, {target: f})
     }
 
+    /** Create, initialize, and return an _File object for the given node
+     * @param {string} nodeid - Unique id on which to open file explorer
+     * @returns {Promise<_Files>} A newly initialized file explorer.
+     */
     async file_explorer(nodeid) {
         return await _Files.create(this, nodeid)
     }
@@ -936,7 +1514,15 @@ class Session {
 
 }
 
+/**
+ * Wrapper around {@link _Shell} that tries to use a regex to detect when a command has finished running and the shell is ready for a new command
+ */
 class _SmartShell {
+    /**
+     * Constructor for _SmartShell
+     * @param {_Shell} shell - The shell object to wrap with our smart shell
+     * @param {regex} regex - Regex to watch the terminal to signify a new command is ready
+     */
     constructor(shell, regex) {
         this._shell = shell
         this._regex = regex
@@ -946,6 +1532,11 @@ class _SmartShell {
         })
     }
 
+    /**
+     * Send a command and wait for it to return
+     * @param {string} command - Command to write
+     * @return {Promise<Buffer>} - Data received from command
+     */
     async send_command(command) {
         if (!command.endsWith("\n")) {
             command += "\n"
@@ -957,6 +1548,9 @@ class _SmartShell {
         })
     }
 
+    /**
+     * Close this smart shell and the underlying shell
+     */
     close() {
         this._shell.close()
     }
@@ -975,9 +1569,13 @@ class _Tunnel {
         this.url = null
         this._socket_open = new _Deferred()
         this.initialized = new _Deferred()
+        this.alive = false
     }
 
     static async create(...args) {
+        if (this === _Tunnel) {
+            throw Error("AbstractClass")
+        }
         let t = new this(...args)
         await t.initialized
         return t
@@ -1011,9 +1609,11 @@ class _Tunnel {
                     this._socket_open.resolve()
                 })
                 this._sock.on('close', (arg, arg2) => {
+                    this.alive = false
                 });
                 this._sock.on('error', (err) => {
                     this._socket_open.reject(err.code)
+                    this.alive = false
                 });
                 this._sock.on('message', this._receive_message.bind(this))
             })
@@ -1051,7 +1651,16 @@ class _SizeChunker extends stream.Transform {
     }
 }
 
+/** Class to control a virtual file explorer on a remote device
+ * @class
+ * @props {boolean} recorded - Whether the file session is being recored. Set in initialization.
+ */
 class _Files extends _Tunnel {
+    /** Constructor for _Files
+     * @param {Session} session - Session representing a logged in user
+     * @param {string} node_id - Node on which to open the file explorer
+     * @returns {_Files} Instance of _Files
+     */
     constructor(session, node_id) {
         super(session, node_id, PROTOCOL.files)
         this.recorded = null
@@ -1063,6 +1672,16 @@ class _Files extends _Tunnel {
 
         this._initialize()
     }
+
+    /** Factory for _Files
+     * @name _Files.create
+     * @function
+     * @static
+     * @param {Session} session - Session representing a logged in user
+     * @param {string} node_id - Node on which to open the file explorer
+     * @returns {_Files} Instance of _Files which has been initialized
+     */
+
 
     _get_request_id(){
         this._request_id = this._request_id++%(2**32-1)
@@ -1090,125 +1709,146 @@ class _Files extends _Tunnel {
         
     }
 
+    /** Return a directory listing from the device
+     * @param {string} directory - Path to the directory you wish to list
+     * @returns {Promise<Object[]>} - An array of objects representing the directory listing
+     */
     async ls(directory) {
-        return this.initialized.then(()=>{
-            return this._send_command({action: "ls", path: directory}, "ls")
+        return this._send_command({action: "ls", path: directory}, "ls").then(data=>{
+            return data.dir
         })
     }
 
+    /** Return a directory listing from the device
+     * @param {string} directory - Path to the directory you wish to list
+     * @returns {Promise<boolean>} - True if firectory creation succeeded
+     */
     async mkdir(directory) {
-        return this.initialized.then(()=>{
-            return this._send_command({action: "mkdir", path: directory}, "mkdir")
-        })
+        let l = this._session.listen_to_events((data)=>{
+            this._session.stop_listening_to_events(l)
+            this._session.stop_listening_to_events(l2)
+            let req = this._request_queue.shift()
+            delete this._requests[req.id]
+            req.resolve(true)
+        }, {"event": {"etype": "node", "action": "agentlog"}})
+        let l2 = this._session.listen_to_events((data)=>{
+            this._session.stop_listening_to_events(l)
+            this._session.stop_listening_to_events(l2)
+            let req = this._request_queue.shift()
+            delete this._requests[req.id]
+            req.reject(new ServerError(data.value))
+        }, {action:"msg", type:"console"})
+        return this._send_command({action: "mkdir", path: directory}, "mkdir")
     }
 
-    async rm(files, {recursive=false}={}) {
+    /** Remove files/folder from the device. This API doesn't error if the file doesn't exist.
+     * @param {string} path - Directory from which to delete files
+     * @param {string} files - Array of filenames to remove
+     * @param {boolean} [recursive=false] - Whether to delete the files recursively
+     * @returns {Promise<string>} - Message returned from server
+     * @throws {ServerError} Error text from server if there is a failure
+     */
+    async rm(path, files, recursive=false) {
         if (typeof(files) === "string") { files = [files] }
-        return this.initialized.then(()=>{
-            return this._send_command({action: "mkdir", delfiles: files, rec: recursive}, "mkdir")
-        })
+        let l = this._session.listen_to_events((data)=>{
+            this._session.stop_listening_to_events(l)
+            this._session.stop_listening_to_events(l2)
+            let req = this._request_queue.shift()
+            delete this._requests[req.id]
+            req.resolve(data.event.msg)
+        }, {"event": {"etype": "node", "action": "agentlog"}})
+        let l2 = this._session.listen_to_events((data)=>{
+            this._session.stop_listening_to_events(l)
+            this._session.stop_listening_to_events(l2)
+            let req = this._request_queue.shift()
+            delete this._requests[req.id]
+            req.reject(new ServerError(data.value))
+        }, {action:"msg", type:"console"})
+        return this._send_command({action: "rm", delfiles: files, rec: recursive, path: path}, "mkdir")
     }
 
+    /** Rename a file or folder on the device. This API doesn't error if the file doesn't exist.
+     * @param {string} path - Directory from which to rename the file
+     * @param {string} name - File which to rename
+     * @param {string} new_name - New name to give the file
+     * @returns {Promise<string>} - Message returned from server
+     * @throws {ServerError} Error text from server if there is a failure
+     */
     async rename(path, name, new_name) {
-        return this.initialized.then(()=>{
-            return this._send_command({action: "rename", path: path, oldname: oldname, newname: new_name}, "rename")
-        })
-    }
-
-    async find(filter, {path="/"}={}) {
-        return this.initialized.then(()=>{
-            return this._send_command({action: "findfile", path: path, filter: filter}, "find")
-        })
-    }
-
-    //This is in the api, not sure what it's for, so I implemented it directly
-    async cancelfindfile() {
-        return this.initialized.then(()=>{
-            return this._send_command({action: "cancelfindfile"}, "cancelfindfile")
-        })
-    }
-
-    async get_hash(path, {name=null}={}) {
-        return this.initialized.then(()=>{
-            return this._send_command({action: "uploadhash", path: path, name: name}, "get_hash")
-        })
-    }
-
-    async copy(source, destination, names) {
-        if (typeof(names) === "string") { names = [names] }
-        return this.initialized.then(()=>{
-            return this._send_command({action: "copy", scpath: source, dspath: destination, names: names}, "copy")
-        })
-    }
-
-    async zip(path, files, output) {
-        if (typeof(files) === "string") { files = [files] }
-        return this.initialized.then(()=>{
-            return this._send_command({action: "zip", path: path, files: files, output: output}, "zip")
-        })
+        let l = this._session.listen_to_events((data)=>{
+            this._session.stop_listening_to_events(l)
+            this._session.stop_listening_to_events(l2)
+            let req = this._request_queue.shift()
+            delete this._requests[req.id]
+            req.resolve(data.event.msg)
+        }, {"event": {"etype": "node", "action": "agentlog"}})
+        let l2 = this._session.listen_to_events((data)=>{
+            this._session.stop_listening_to_events(l)
+            this._session.stop_listening_to_events(l2)
+            let req = this._request_queue.shift()
+            delete this._requests[req.id]
+            req.reject(new ServerError(data.value))
+        }, {action:"msg", type:"console"})
+        return this._send_command({action: "rename", path: path, oldname: name, newname: new_name}, "rename")
     }
 
     async upload(source, target, {name=null}={}) {
-        return this.initialized.then(()=>{
-            if (source.readableEnded) {
-                throw Error("Cannot upload from ended readable")
-            }
-            let request_id = `upload_${this._get_request_id()}`
-            let outstream = new _SizeChunker(65564)
-            this._requests[request_id] = {id: request_id, type: "upload", source: source, chunker: outstream, target: target, name: name, size: 0, chunks: [], complete: false, has_data: new _Deferred(), inflight: 0}
-            // outstream.on("data", (data) => {
-            //     console.log("Read a chunk")
-            //     this._requests[request_id].chunks.push(data)
-            //     console.log(this._requests[request_id].chunks)
-            //     this._requests[request_id].has_data.resolve()
-            //     this._requests[request_id].has_data = new _Deferred()
-            // })
-            // outstream.on("end",() => {
-            //     console.log("Ended")
-            //     this._requests[request_id].has_data.resolve()
-            //     this._requests[request_id].complete = true
-            // })
-            // source.pipe(outstream)
-            this._request_queue.push(this._requests[request_id])
-            let f = ()=>{
-                return new Promise((resolve, reject)=>{
-                    this._sock.send(JSON.stringify({ action: 'upload', reqid: request_id, path: target, name: name}))
-                    this._eventer.once(request_id, (data)=>{
-                        delete this._requests[this._request_queue.shift().id]
-                        if (data.result == "success") {
-                            resolve(data)
-                        } else {
-                            reject(data)
-                        }
-                    })
+        if (source.readableEnded) {
+            throw Error("Cannot upload from ended readable")
+        }
+        let request_id = `upload_${this._get_request_id()}`
+        let outstream = new _SizeChunker(65564)
+        this._requests[request_id] = {id: request_id, type: "upload", source: source, chunker: outstream, target: target, name: name, size: 0, chunks: [], complete: false, has_data: new _Deferred(), inflight: 0}
+        // outstream.on("data", (data) => {
+        //     console.log("Read a chunk")
+        //     this._requests[request_id].chunks.push(data)
+        //     console.log(this._requests[request_id].chunks)
+        //     this._requests[request_id].has_data.resolve()
+        //     this._requests[request_id].has_data = new _Deferred()
+        // })
+        // outstream.on("end",() => {
+        //     console.log("Ended")
+        //     this._requests[request_id].has_data.resolve()
+        //     this._requests[request_id].complete = true
+        // })
+        // source.pipe(outstream)
+        this._request_queue.push(this._requests[request_id])
+        let f = ()=>{
+            return new Promise((resolve, reject)=>{
+                this._sock.send(JSON.stringify({ action: 'upload', reqid: request_id, path: target, name: name}))
+                this._eventer.once(request_id, (data)=>{
+                    delete this._requests[this._request_queue.shift().id]
+                    if (data.result == "success") {
+                        resolve(data)
+                    } else {
+                        reject(data)
+                    }
                 })
-            }
-            this._download_finished = this._download_finished.then(f, f)
-            return this._download_finished
-        })
+            })
+        }
+        this._download_finished = this._download_finished.then(f, f)
+        return this._download_finished
     }
 
     async download(source, target) {
-        return this.initialized.then(()=>{
-            let request_id = `download_${this._get_request_id()}`
-            this._requests[request_id] = {id: request_id, type: "download", source: source, target: target, size: 0}
-            this._request_queue.push(this._requests[request_id])
-            let f = ()=>{
-                return new Promise((resolve, reject)=>{
-                    this._sock.send(JSON.stringify({ action: 'download', sub: 'start', id: request_id, path: source }))
-                    this._eventer.once(request_id, (data)=>{
-                        delete this._requests[this._request_queue.shift().id]
-                        if (data.result == "success") {
-                            resolve(data)
-                        } else {
-                            reject(data)
-                        }
-                    })
+        let request_id = `download_${this._get_request_id()}`
+        this._requests[request_id] = {id: request_id, type: "download", source: source, target: target, size: 0}
+        this._request_queue.push(this._requests[request_id])
+        let f = ()=>{
+            return new Promise((resolve, reject)=>{
+                this._sock.send(JSON.stringify({ action: 'download', sub: 'start', id: request_id, path: source }))
+                this._eventer.once(request_id, (data)=>{
+                    delete this._requests[this._request_queue.shift().id]
+                    if (data.result == "success") {
+                        resolve(data)
+                    } else {
+                        reject(data)
+                    }
                 })
-            }
-            this._download_finished = this._download_finished.then(f, f)
-            return this._download_finished
-        })
+            })
+        }
+        this._download_finished = this._download_finished.then(f, f)
+        return this._download_finished
     }
 
     _handle_upload(raw_data, req) {
@@ -1303,11 +1943,21 @@ class _Files extends _Tunnel {
             }
             this._sock.send(Buffer.from(`${this._protocol}`))
             this.initialized.resolve()
+            this.alive = true
         }
     }
 }
 
+/** Class for Mesh Central agent shell
+ * @prop {_Deffered} initialized - Promise which is resolved when session is initialized, and rejected upon failure
+ * @prop {bool} alive - Whether the session is currently alive*/
 class _Shell extends _Tunnel {
+
+    /** Constructor for _Shell
+     * @param {Session} session - Session representing a logged in user
+     * @param {string} node_id - Node on which to open the shell
+     * @returns {_Shell} Instance of _Shell
+     */
     constructor(session, node_id) {
         this.recorded = null
         this._buffer = Buffer.alloc(0)
@@ -1318,16 +1968,36 @@ class _Shell extends _Tunnel {
         this._initialize()
     }
 
+    /** Factory for _Shell
+     * @name _Shell.create
+     * @function
+     * @static
+     * @param {Session} session - Session representing a logged in user
+     * @param {string} node_id - Node on which to open the shell
+     * @returns {_Shell} Instance of _Shell which has been initialized
+     */
+
+    /** Write to the shell
+     * @param {string} command - String to write to the shell
+     * @return {Promise} Resolved when data is sent. No verification is performed.
+     */
     async write(command) {
         return this._sock.send(Buffer.from(command))
     }
 
+    /** Read from the shell
+     * @param {number} [length=null] - Number of bytes to read. null == read until closed or timeout occurs
+     * @param {number} [timeout=null] - Milliseconds to wait for data. null == read until `length` bytes are read, or shell is closed.
+     * @param {boolean} [return_intermediate=false] - If timeout occurs, return all data read. Otherwise, leave it in the buffer.
+     * @return {Promise<Buffer>} Buffer of data read
+     * @throws {Object} Containing `reason` for failure, and `data` read so far, if applicable.
+     */
     async read(length=null, timeout=null, return_intermediate=false) {
         let start = new Date()
         return new Promise((resolve, reject)=>{
             let check_data = ()=>{
-                if (timeout !== null && new Date() - start > timeout) {
-                    let obj = {reason: "timeout"}
+                if ((timeout !== null && new Date() - start > timeout) || this._sock.readyState > 1) {
+                    let obj = {reason: this._sock.readyState < 2 ? "timeout" : "closed"}
                     if (return_intermediate) {
                         obj["data"] = this._buffer.slice(0, length)
                         this._buffer = this._buffer.slice(length)
@@ -1353,14 +2023,21 @@ class _Shell extends _Tunnel {
         })
     }
 
+    /** Read data from the shell until `regex` is seen
+     * @param {regex} regex - Regular expression to wait for in the shell
+     * @param {number} [timeout=null] - Milliseconds to wait for data. null == read until `regex` is seen, or shell is closed.
+     * @param {boolean} [return_intermediate=false] - If timeout occurs, return all data read. Otherwise, leave it in the buffer.
+     * @return {Promise<Buffer>} Buffer of data read
+     * @throws {Object} Containing `reason` for failure, and `data` read so far, if applicable.
+     */
     async expect(regex, timeout=null, return_intermediate=false) {
         let data = Buffer.alloc(0),
             start = new Date()
 
         return new Promise((resolve, reject)=>{
             let check_data = ()=>{
-                if (timeout !== null && new Date() - start > timeout) {
-                    let obj = {reason: "timeout"}
+                if ((timeout !== null && new Date() - start > timeout) || this._sock.readyState > 1) {
+                    let obj = {reason: this._sock.readyState < 2 ? "timeout" : "closed"}
                     if (return_intermediate) {
                         this.read(1024, 100, true).then((data)=>{
                             obj["data"] = data
@@ -1389,6 +2066,9 @@ class _Shell extends _Tunnel {
         })
     }
 
+    /**
+     * Close this the shell. No more data can be written, but data can still be read from the current buffer.
+     */
     close() {
         this._sock.close()
     }
@@ -1425,4 +2105,4 @@ let _Internal = {
     _make_bitwise_enum
 }
 
-export {Session as default, Session, MESHRIGHTS, USERRIGHTS, CONSENTFLAGS, SHARINGTYPE, SHARINGTYPENUM, PROTOCOL, _Internal}
+export {Session as default, Session, MESHRIGHTS, USERRIGHTS, CONSENTFLAGS, MESHFEATURES, SHARINGTYPE, SHARINGTYPENUM, PROTOCOL, ICON, _Internal}
