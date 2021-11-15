@@ -1,0 +1,27 @@
+{
+    "name": "libmeshctrl",
+    "version": "1.0.0",
+    "description": "API for remotely interacting with a MeshCentral server instance",
+    "author": "Josiah Baldwin <jbaldwin8889@gmail.com>",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "crypto": "^1.0.1",
+        "https-proxy-agent": "^5.0.0",
+        "lodash": "^4.17.21",
+        "ws": "^8.2.3"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Ylianst/LibMeshCtrl"
+    },
+    "scripts": {
+        "documentation": "jsdoc2md -c ./jsdoc.conf --files ./libmeshctrl.mjs > doc/api.md",
+        "build": "run-p \"documentation\""
+    },
+    "main": "libmeshctrl.mjs",
+    "type": "module",
+    "devDependencies": {
+        "jsdoc-to-markdown": "~7.1.0",
+        "npm-run-all": "^4.1.5"
+    }
+}
