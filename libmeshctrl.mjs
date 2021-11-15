@@ -242,7 +242,7 @@ const SHARINGTYPENUM = _make_enum(["desktop", "terminal"], {start_value: 0x1})
 const ICON = _make_enum(["desktop", "latop", "phone", "server", "htpc", "router", "embedded", "virtual"], {start_value: 0x1})
 
 /** Class for MeshCentral Session 
- * @prop {_Deffered} initialized - Promise which is resolved when session is initialized, and rejected upon failure
+ * @prop {_Deferred} initialized - Promise which is resolved when session is initialized, and rejected upon failure
  * @prop {bool} alive - Whether the session is currently alive*/
 class Session {
     /**
@@ -1951,7 +1951,7 @@ class _Files extends _Tunnel {
 }
 
 /** Class for Mesh Central agent shell
- * @prop {_Deffered} initialized - Promise which is resolved when session is initialized, and rejected upon failure
+ * @prop {_Deferred} initialized - Promise which is resolved when session is initialized, and rejected upon failure
  * @prop {bool} alive - Whether the session is currently alive*/
 class _Shell extends _Tunnel {
 

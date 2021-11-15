@@ -61,7 +61,7 @@ Class for MeshCentral Session
 
 | Name | Type | Description |
 | --- | --- | --- |
-| initialized | <code>\_Deffered</code> | Promise which is resolved when session is initialized, and rejected upon failure |
+| initialized | [<code>\_Deferred</code>](#_Deferred) | Promise which is resolved when session is initialized, and rejected upon failure |
 | alive | <code>bool</code> | Whether the session is currently alive |
 
 
@@ -1129,7 +1129,7 @@ Class for Mesh Central agent shell
 
 | Name | Type | Description |
 | --- | --- | --- |
-| initialized | <code>\_Deffered</code> | Promise which is resolved when session is initialized, and rejected upon failure |
+| initialized | [<code>\_Deferred</code>](#_Deferred) | Promise which is resolved when session is initialized, and rejected upon failure |
 | alive | <code>bool</code> | Whether the session is currently alive |
 
 
