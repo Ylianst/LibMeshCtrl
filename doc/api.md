@@ -69,34 +69,34 @@ Class for MeshCentral Session
     * [new Session(url, [options])](#new_Session_new)
     * _instance_
         * [.close()](#Session+close)
-        * [.server_info()](#Session+server_info) ⇒ <code>Promise</code>
-        * [.user_info()](#Session+user_info) ⇒ <code>Promise</code>
-        * [.send_invite_email(group, email, [options])](#Session+send_invite_email) ⇒ <code>Promise</code>
-        * [.generate_invite_link(group, hours, [options])](#Session+generate_invite_link) ⇒ <code>Promise</code>
-        * [.list_users()](#Session+list_users) ⇒ <code>Promise</code>
-        * [.list_user_sessions()](#Session+list_user_sessions) ⇒ <code>Promise</code>
-        * [.list_user_groups()](#Session+list_user_groups) ⇒ <code>Promise</code>
-        * [.list_device_groups()](#Session+list_device_groups) ⇒ <code>Promise</code>
-        * [.list_devices([options])](#Session+list_devices) ⇒ <code>Promise</code>
+        * [.server_info()](#Session+server_info) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.user_info()](#Session+user_info) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.send_invite_email(group, email, [options])](#Session+send_invite_email) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.generate_invite_link(group, hours, [options])](#Session+generate_invite_link) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.list_users()](#Session+list_users) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_user_sessions()](#Session+list_user_sessions) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_user_groups()](#Session+list_user_groups) ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
+        * [.list_device_groups()](#Session+list_device_groups) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_devices([options])](#Session+list_devices) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
         * [.listen_to_events(f, [filter])](#Session+listen_to_events) ⇒ <code>function</code>
         * [.stop_listening_to_events(Callback)](#Session+stop_listening_to_events)
-        * [.list_events([options])](#Session+list_events) ⇒ <code>Promise</code>
-        * [.list_login_tokens()](#Session+list_login_tokens) ⇒ <code>Promise</code>
-        * [.add_login_token(name, [expire])](#Session+add_login_token) ⇒ <code>Promise</code>
-        * [.remove_login_token(name)](#Session+remove_login_token) ⇒ <code>Promise</code>
-        * [.add_user(name, password, [options])](#Session+add_user) ⇒ <code>Promise</code>
-        * [.edit_user(userid, [options])](#Session+edit_user) ⇒ <code>Promise</code>
-        * [.remove_user(userid)](#Session+remove_user) ⇒ <code>Promise</code>
-        * [.add_user_group(name, [description])](#Session+add_user_group) ⇒ <code>Promise</code>
-        * [.remove_user_group(userid)](#Session+remove_user_group) ⇒ <code>Promise</code>
-        * [.add_users_to_user_group(ids, groupid)](#Session+add_users_to_user_group) ⇒ <code>Promise</code>
-        * [.remove_user_from_user_group(id, groupid)](#Session+remove_user_from_user_group) ⇒ <code>Promise</code>
-        * [.add_users_to_device(userids, nodeid, [rights])](#Session+add_users_to_device) ⇒ <code>Promise</code>
-        * [.remove_users_from_device(nodeid, userids)](#Session+remove_users_from_device) ⇒ <code>Promise</code>
-        * [.add_device_group(name, [options])](#Session+add_device_group) ⇒ <code>Promise</code>
-        * [.remove_device_group(meshid, [isname])](#Session+remove_device_group) ⇒ <code>Promise</code>
-        * [.edit_device_group(meshid, [options])](#Session+edit_device_group) ⇒ <code>Promise</code>
-        * [.move_to_device_group(nodeids, meshid, [isname])](#Session+move_to_device_group) ⇒ <code>Promise</code>
+        * [.list_events([options])](#Session+list_events) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_login_tokens()](#Session+list_login_tokens) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.add_login_token(name, [expire])](#Session+add_login_token) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_login_token(name)](#Session+remove_login_token) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.add_user(name, password, [options])](#Session+add_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.edit_user(userid, [options])](#Session+edit_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.remove_user(userid)](#Session+remove_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_user_group(name, [description])](#Session+add_user_group) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_user_group(userid)](#Session+remove_user_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_users_to_user_group(ids, groupid)](#Session+add_users_to_user_group) ⇒ <code>Promise.&lt;Array.&lt;string&gt;&gt;</code>
+        * [.remove_user_from_user_group(id, groupid)](#Session+remove_user_from_user_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_users_to_device(userids, nodeid, [rights])](#Session+add_users_to_device) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.remove_users_from_device(nodeid, userids)](#Session+remove_users_from_device) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_device_group(name, [options])](#Session+add_device_group) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_device_group(meshid, [isname])](#Session+remove_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.edit_device_group(meshid, [options])](#Session+edit_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.move_to_device_group(nodeids, meshid, [isname])](#Session+move_to_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
         * [.add_users_to_device_group(userids, meshid, [options])](#Session+add_users_to_device_group) ⇒ <code>Promise.&lt;object&gt;</code>
         * [.remove_users_from_device_group(userids, meshid, [isname])](#Session+remove_users_from_device_group) ⇒ <code>Promise.&lt;Object&gt;</code>
         * [.broadcast(message, [userid])](#Session+broadcast) ⇒ <code>Promise.&lt;boolean&gt;</code>
@@ -152,25 +152,25 @@ Close Session
 **Kind**: instance method of [<code>Session</code>](#Session)  
 <a name="Session+server_info"></a>
 
-### session.server\_info() ⇒ <code>Promise</code>
+### session.server\_info() ⇒ <code>Promise.&lt;Object&gt;</code>
 Get server information
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for object containing server info  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - Server info  
 <a name="Session+user_info"></a>
 
-### session.user\_info() ⇒ <code>Promise</code>
+### session.user\_info() ⇒ <code>Promise.&lt;Object&gt;</code>
 Get user information
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for object containing user info  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - User info  
 <a name="Session+send_invite_email"></a>
 
-### session.send\_invite\_email(group, email, [options]) ⇒ <code>Promise</code>
+### session.send\_invite\_email(group, email, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Send an invite email for a group or mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -187,11 +187,11 @@ Send an invite email for a group or mesh
 
 <a name="Session+generate_invite_link"></a>
 
-### session.generate\_invite\_link(group, hours, [options]) ⇒ <code>Promise</code>
+### session.generate\_invite\_link(group, hours, [options]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Generate an invite link for a group or mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for invite link information  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - Invite link information  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -207,43 +207,43 @@ Generate an invite link for a group or mesh
 
 <a name="Session+list_users"></a>
 
-### session.list\_users() ⇒ <code>Promise</code>
+### session.list\_users() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List users on server. Admin Only.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise represents a list of users  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of users  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 
 <a name="Session+list_user_sessions"></a>
 
-### session.list\_user\_sessions() ⇒ <code>Promise</code>
+### session.list\_user\_sessions() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Get list of connected users. Admin Only.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of user sessions  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of user sessions  
 <a name="Session+list_user_groups"></a>
 
-### session.list\_user\_groups() ⇒ <code>Promise</code>
+### session.list\_user\_groups() ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
 Get user groups. Admin will get all user groups, otherwise get limited user groups
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of groups, or null if no groups are found  
+**Returns**: <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code> - List of groups, or null if no groups are found  
 <a name="Session+list_device_groups"></a>
 
-### session.list\_device\_groups() ⇒ <code>Promise</code>
+### session.list\_device\_groups() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Get device groups. Only returns meshes to which the logged in user has access
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of meshes  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of meshes  
 <a name="Session+list_devices"></a>
 
-### session.list\_devices([options]) ⇒ <code>Promise</code>
+### session.list\_devices([options]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Get devices to which the user has access.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of nodes  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of nodes  
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -278,11 +278,11 @@ Stop listening to server events
 
 <a name="Session+list_events"></a>
 
-### session.list\_events([options]) ⇒ <code>Promise</code>
+### session.list\_events([options]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List events visible to the currect user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of events  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of events  
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -293,18 +293,18 @@ List events visible to the currect user
 
 <a name="Session+list_login_tokens"></a>
 
-### session.list\_login\_tokens() ⇒ <code>Promise</code>
+### session.list\_login\_tokens() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List login tokens for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of tokens  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of tokens  
 <a name="Session+add_login_token"></a>
 
-### session.add\_login\_token(name, [expire]) ⇒ <code>Promise</code>
+### session.add\_login\_token(name, [expire]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Create login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for the created token  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - Created token  
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -313,11 +313,11 @@ Create login token for current user. WARNING: Non namespaced call. Calling this 
 
 <a name="Session+remove_login_token"></a>
 
-### session.remove\_login\_token(name) ⇒ <code>Promise</code>
+### session.remove\_login\_token(name) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Remove login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for the list of remaining tokens  
+**Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of remaining tokens  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -325,11 +325,11 @@ Remove login token for current user. WARNING: Non namespaced call. Calling this 
 
 <a name="Session+add_user"></a>
 
-### session.add\_user(name, password, [options]) ⇒ <code>Promise</code>
+### session.add\_user(name, password, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Add a new user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -351,11 +351,11 @@ Add a new user
 
 <a name="Session+edit_user"></a>
 
-### session.edit\_user(userid, [options]) ⇒ <code>Promise</code>
+### session.edit\_user(userid, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Edit an existing user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -375,11 +375,11 @@ Edit an existing user
 
 <a name="Session+remove_user"></a>
 
-### session.remove\_user(userid) ⇒ <code>Promise</code>
+### session.remove\_user(userid) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove an existing user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -391,11 +391,11 @@ Remove an existing user
 
 <a name="Session+add_user_group"></a>
 
-### session.add\_user\_group(name, [description]) ⇒ <code>Promise</code>
+### session.add\_user\_group(name, [description]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Create a new user group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for the new user group  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - New user group  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -408,11 +408,11 @@ Create a new user group
 
 <a name="Session+remove_user_group"></a>
 
-### session.remove\_user\_group(userid) ⇒ <code>Promise</code>
+### session.remove\_user\_group(userid) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove an existing user group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for the new user group  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -424,11 +424,11 @@ Remove an existing user group
 
 <a name="Session+add_users_to_user_group"></a>
 
-### session.add\_users\_to\_user\_group(ids, groupid) ⇒ <code>Promise</code>
+### session.add\_users\_to\_user\_group(ids, groupid) ⇒ <code>Promise.&lt;Array.&lt;string&gt;&gt;</code>
 Add user(s) to an existing user group. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for a list of users that were successfully added  
+**Returns**: <code>Promise.&lt;Array.&lt;string&gt;&gt;</code> - List of users that were successfully added  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -441,11 +441,11 @@ Add user(s) to an existing user group. WARNING: Non namespaced call. Calling thi
 
 <a name="Session+remove_user_from_user_group"></a>
 
-### session.remove\_user\_from\_user\_group(id, groupid) ⇒ <code>Promise</code>
+### session.remove\_user\_from\_user\_group(id, groupid) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove user from an existing user group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -458,11 +458,11 @@ Remove user from an existing user group
 
 <a name="Session+add_users_to_device"></a>
 
-### session.add\_users\_to\_device(userids, nodeid, [rights]) ⇒ <code>Promise</code>
+### session.add\_users\_to\_device(userids, nodeid, [rights]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Add a user to an existing node
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -476,11 +476,11 @@ Add a user to an existing node
 
 <a name="Session+remove_users_from_device"></a>
 
-### session.remove\_users\_from\_device(nodeid, userids) ⇒ <code>Promise</code>
+### session.remove\_users\_from\_device(nodeid, userids) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove users from an existing node
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -493,11 +493,11 @@ Remove users from an existing node
 
 <a name="Session+add_device_group"></a>
 
-### session.add\_device\_group(name, [options]) ⇒ <code>Promise</code>
+### session.add\_device\_group(name, [options]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Create a new device group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for the new device group  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - New device group  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -514,11 +514,11 @@ Create a new device group
 
 <a name="Session+remove_device_group"></a>
 
-### session.remove\_device\_group(meshid, [isname]) ⇒ <code>Promise</code>
+### session.remove\_device\_group(meshid, [isname]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove an existing device group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -531,11 +531,11 @@ Remove an existing device group
 
 <a name="Session+edit_device_group"></a>
 
-### session.edit\_device\_group(meshid, [options]) ⇒ <code>Promise</code>
+### session.edit\_device\_group(meshid, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Edit an existing device group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
@@ -556,11 +556,11 @@ Edit an existing device group
 
 <a name="Session+move_to_device_group"></a>
 
-### session.move\_to\_device\_group(nodeids, meshid, [isname]) ⇒ <code>Promise</code>
+### session.move\_to\_device\_group(nodeids, meshid, [isname]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Move a device from one group to another
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: <code>Promise</code> - Promise for true if it succeeds  
+**Returns**: <code>Promise.&lt;Boolean&gt;</code> - true on success  
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure

@@ -418,7 +418,7 @@ class Session {
 
     /**
      * Get server information
-     * @return {Promise} Promise for object containing server info
+     * @return {Promise<Object>} Server info
      */
     async server_info() {
         return this._server_info
@@ -426,7 +426,7 @@ class Session {
 
     /**
      * Get user information
-     * @return {Promise} Promise for object containing user info
+     * @return {Promise<Object>} User info
      */
     async user_info() {
         return this._user_info
@@ -467,7 +467,7 @@ class Session {
      * @param {string} [options.name=null] - User's name. For display purposes.
      * @param {string} [options.message=null] - Message to send to user in invite email
      * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async send_invite_email(group, email, {name=null, message=null, meshid=null}={}){
@@ -490,7 +490,7 @@ class Session {
      * @param {Object} [options={}]
      * @param {MESHRIGHTS} [options.flags=null] - Bitwise flags for MESHRIGHTS
      * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
-     * @return {Promise} Promise for invite link information
+     * @return {Promise<Object>} Invite link information
      * @throws {ServerError} Error text from server if there is a failure
      */
     async generate_invite_link(group, hours, {flags=null, meshid=null}={}) {
@@ -510,7 +510,7 @@ class Session {
 
     /**
      * List users on server. Admin Only.
-     * @returns {Promise} Promise represents a list of users
+     * @returns {Promise<Object[]>} List of users
      * @throws {ServerError} Error text from server if there is a failure
      */
     async list_users() {
@@ -524,7 +524,7 @@ class Session {
 
     /**
      * Get list of connected users. Admin Only.
-     * @returns {Promise} Promise for a list of user sessions
+     * @returns {Promise<Object[]>} List of user sessions
      */
     async list_user_sessions() {
         return this._send_command({action: "wssessioncount"}, "list_user_sessions").then((data)=>{
@@ -534,7 +534,7 @@ class Session {
 
     /**
      * Get user groups. Admin will get all user groups, otherwise get limited user groups
-     * @returns {Promise} Promise for a list of groups, or null if no groups are found
+     * @returns {Promise<Object[]|null>} List of groups, or null if no groups are found
      */
     async list_user_groups() {
         return this._send_command({action: "usergroups"}, "list_user_groups").then((data)=>{
@@ -544,7 +544,7 @@ class Session {
 
     /**
      * Get device groups. Only returns meshes to which the logged in user has access
-     * @returns {Promise} Promise for a list of meshes
+     * @returns {Promise<Object[]>} List of meshes
      */
     async list_device_groups() {
         return this._send_command({action: "meshes"}, "list_device_groups").then((data)=>{
@@ -558,7 +558,7 @@ class Session {
      * @param {boolean} [options.details=false] - Get device details
      * @param {string} [options.group=null] - Get devices from specific group by name. Overrides meshid
      * @param {string} [options.meshid=null] - Get devices from specific group by id
-     * @returns {Promise} Promise for a list of nodes
+     * @returns {Promise<Object[]>} List of nodes
      */
     async list_devices({details=false, group=null, meshid=null}={}) {
         let command_list = []
@@ -638,7 +638,7 @@ class Session {
      * @param {string} [options.userid=null] - Filter by user. Overrides nodeid.
      * @param {string} [options.nodeid=null] - Filter by node
      * @param {number} [options.limit=null] - Limit to the N most recent events
-     * @return {Promise} Promise for a list of events
+     * @return {Promise<Object[]>} List of events
      */
     async list_events({userid=null, nodeid=null, limit=null}={}) {
         if ((typeof limit != 'number') || (limit < 1)) { limit = null; }
@@ -659,7 +659,7 @@ class Session {
 
     /** 
      * List login tokens for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
-     * @return {Promise} Promise for a list of tokens
+     * @return {Promise<Object[]>} List of tokens
      */
     async list_login_tokens() {
         return this._send_command_no_response_id({ action: 'loginTokens' }).then((data)=>{
@@ -671,7 +671,7 @@ class Session {
      * Create login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} name - Name of token
      * @param {number} [expire=null] - Minutes until expiration. 0 or null for no expiration.
-     * @return {Promise} Promise for the created token
+     * @return {Promise<Object>} Created token
      */
     async add_login_token(name, expire=null) {
         let cmd = { action: 'createLoginToken', name: name, expire: 0 }
@@ -687,7 +687,7 @@ class Session {
     /** 
      * Remove login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} name - Name of token or token username
-     * @return {Promise} Promise for the list of remaining tokens
+     * @return {Promise<Object[]>} List of remaining tokens
      */
     async remove_login_token(names) {
         if (typeof names === "string") {
@@ -724,7 +724,7 @@ class Session {
      * @param {string} [options.realname=null] - User's real name
      * @param {string} [options.phone=null] - User's phone number
      * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async add_user(name, password, {randompass=false, domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}={}) {
@@ -758,7 +758,7 @@ class Session {
      * @param {string} [options.realname=null] - User's real name
      * @param {string} [options.phone=null] - User's phone number
      * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async edit_user(userid, {domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}) {
@@ -786,7 +786,7 @@ class Session {
     /** 
      * Remove an existing user
      * @param {string} userid - Unique userid
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async remove_user(userid) {
@@ -803,7 +803,7 @@ class Session {
      * Create a new user group
      * @param {string} name - Name of usergroup
      * @param {string} [description=null] - Description of user group
-     * @return {Promise} Promise for the new user group
+     * @return {Promise<Object>} New user group
      * @throws {ServerError} Error text from server if there is a failure
      */
     async add_user_group(name, description=null) {
@@ -823,7 +823,7 @@ class Session {
     /** 
      * Remove an existing user group
      * @param {string} userid - Unique userid
-     * @return {Promise} Promise for the new user group
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async remove_user_group(groupid) {
@@ -843,7 +843,7 @@ class Session {
      * Add user(s) to an existing user group. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string|array} ids - Unique user id(s)
      * @param {string} groupid - Group to add the given user to
-     * @return {Promise} Promise for a list of users that were successfully added
+     * @return {Promise<string[]>} List of users that were successfully added
      * @throws {ServerError} Error text from server if there is a failure
      */
     async add_users_to_user_group(userids, groupid) {
@@ -872,7 +872,7 @@ class Session {
      * Remove user from an existing user group
      * @param {string} id - Unique user id
      * @param {string} groupid - Group to remove the given user from
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async remove_user_from_user_group(userid, groupid) {
@@ -893,7 +893,7 @@ class Session {
      * @param {string|array} userids - Unique user id(s)
      * @param {string} nodeid - Node to add the given user to
      * @param {MESHRIGHTS} [rights=null] - Bitwise mask for the rights on the given mesh
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async add_users_to_device(userids, nodeid, rights=null) {
@@ -914,7 +914,7 @@ class Session {
      * Remove users from an existing node
      * @param {string} nodeid - Node to remove the given users from
      * @param {string|array} userids - Unique user id(s)
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async remove_users_from_device(nodeid, userids) {
@@ -936,7 +936,7 @@ class Session {
      * @param {boolean} [options.amtonly=false] - 
      * @param {MESHFEATURES} [options.features=0] - Bitwise features to enable on the group
      * @param {CONSENTFLAGS} [options.consent=0] - Bitwise consent flags to use for the group
-     * @return {Promise} Promise for the new device group
+     * @return {Promise<Object>} New device group
      * @throws {ServerError} Error text from server if there is a failure
      */
     async add_device_group(name, {description="", amtonly=false, features=0, consent=0}={}) {
@@ -960,7 +960,7 @@ class Session {
      * Remove an existing device group
      * @param {string} meshid - Unique id of device group
      * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async remove_device_group(meshid, isname=false) {
@@ -989,7 +989,7 @@ class Session {
      * @param {string[]} [options.invite_codes=null] - Create new invite codes
      * @param {boolean} [options.backgroundonly=false] - Flag for invite codes
      * @param {boolean} [options.interactiveonly=false] - Flag for invite codes
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async edit_device_group(meshid, {isname=false, name=null, description=null, flags=null, consent=null, invite_codes=null, backgroundonly=false, interactiveonly=false}={}) {
@@ -1026,7 +1026,7 @@ class Session {
      * @param {string|array} nodeids - Unique node id(s)
      * @param {string} meshid - Unique mesh id
      * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
-     * @return {Promise} Promise for true if it succeeds
+     * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      */
     async move_to_device_group(nodeids, meshid, isname=false) {
