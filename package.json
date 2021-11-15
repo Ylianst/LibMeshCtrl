@@ -5,10 +5,6 @@
     "author": "Josiah Baldwin <jbaldwin8889@gmail.com>",
     "license": "Apache-2.0",
     "dependencies": {
-<<<<<<< HEAD
-=======
-        "crypto": "^1.0.1",
->>>>>>> 1e62165b91853d6bcdc261e1d10bae21410b58d6
         "https-proxy-agent": "^5.0.0",
         "lodash": "^4.17.21",
         "ws": "^8.2.3"
