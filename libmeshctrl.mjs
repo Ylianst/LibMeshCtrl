@@ -1915,7 +1915,7 @@ class _Files extends _Tunnel {
     _receive_message(raw_data) {
         var data = raw_data.toString();
         if (this.initialized.resolved) {
-            if (raw_data[0] === 123 && !["upload", "download"].includes(this._request_queue[0].type)) {
+            if (raw_data[0] === 123 && this._request_queue.length && !["upload", "download"].includes(this._request_queue[0].type)) {
                 this._handle_action(raw_data)
             }
             else if (this._request_queue.length && this._request_queue[0].type === "upload") {
