@@ -1706,7 +1706,7 @@ class _Files extends _Tunnel {
         let r = ()=>{
             if (this.alive) {
                 this._sock.send(JSON.stringify(Object.assign({}, data, { responseid: id })))
-                this.requests[id].finished
+                return this._requests[id].finished
             }
         }
         return this._download_finished = this._download_finished.then(r, r)
