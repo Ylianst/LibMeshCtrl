@@ -1665,7 +1665,6 @@ class _Files extends _Tunnel {
         super(session, node_id, PROTOCOL.files)
         this.recorded = null
         this._request_id = 0
-        this._requests = {}
         this._request_queue = []
         this._download_finished = new _Deferred()
         this._download_finished.resolve()
@@ -1701,12 +1700,12 @@ class _Files extends _Tunnel {
 
     async _send_command(data, name) {
         let id = `meshctrl_${name}_${this._get_request_id()}`
-        this._requests[id] = {id: id, type: name, finished: new _Deferred()}
-        this._request_queue.push(this._requests[id])
+        let request = {id: id, type: name, finished: new _Deferred()}
+        this._request_queue.push(request)
         let r = ()=>{
             if (this.alive) {
                 this._sock.send(JSON.stringify(Object.assign({}, data, { responseid: id })))
-                return this._requests[id].finished
+                return request.finished
             }
         }
         return this._download_finished = this._download_finished.then(r, r)
@@ -1732,14 +1731,12 @@ class _Files extends _Tunnel {
             this._session.stop_listening_to_events(l)
             this._session.stop_listening_to_events(l2)
             let req = this._request_queue.shift()
-            delete this._requests[req.id]
             req.finished.resolve(true)
         }, {"event": {"etype": "node", "action": "agentlog"}})
         let l2 = this._session.listen_to_events((data)=>{
             this._session.stop_listening_to_events(l)
             this._session.stop_listening_to_events(l2)
             let req = this._request_queue.shift()
-            delete this._requests[req.id]
             req.finished.reject(new ServerError(data.value))
         }, {action:"msg", type:"console"})
         return this._send_command({action: "mkdir", path: directory}, "mkdir")
@@ -1758,14 +1755,12 @@ class _Files extends _Tunnel {
             this._session.stop_listening_to_events(l)
             this._session.stop_listening_to_events(l2)
             let req = this._request_queue.shift()
-            delete this._requests[req.id]
             req.finished.resolve(data.event.msg)
         }, {"event": {"etype": "node", "action": "agentlog"}})
         let l2 = this._session.listen_to_events((data)=>{
             this._session.stop_listening_to_events(l)
             this._session.stop_listening_to_events(l2)
             let req = this._request_queue.shift()
-            delete this._requests[req.id]
             req.finished.reject(new ServerError(data.value))
         }, {action:"msg", type:"console"})
         return this._send_command({action: "rm", delfiles: files, rec: recursive, path: path}, "mkdir")
@@ -1783,14 +1778,12 @@ class _Files extends _Tunnel {
             this._session.stop_listening_to_events(l)
             this._session.stop_listening_to_events(l2)
             let req = this._request_queue.shift()
-            delete this._requests[req.id]
             req.finished.resolve(data.event.msg)
         }, {"event": {"etype": "node", "action": "agentlog"}})
         let l2 = this._session.listen_to_events((data)=>{
             this._session.stop_listening_to_events(l)
             this._session.stop_listening_to_events(l2)
             let req = this._request_queue.shift()
-            delete this._requests[req.id]
             req.finished.reject(new ServerError(data.value))
         }, {action:"msg", type:"console"})
         return this._send_command({action: "rename", path: path, oldname: name, newname: new_name}, "rename")
@@ -1802,21 +1795,20 @@ class _Files extends _Tunnel {
         }
         let request_id = `upload_${this._get_request_id()}`
         let outstream = new _SizeChunker(65564)
-        this._requests[request_id] = {id: request_id, type: "upload", source: source, chunker: outstream, target: target, name: name, size: 0, chunks: [], complete: false, has_data: new _Deferred(), inflight: 0, finished: new _Deferred()}
-        this._request_queue.push(this._requests[request_id])
+        let request = {id: request_id, type: "upload", source: source, chunker: outstream, target: target, name: name, size: 0, chunks: [], complete: false, has_data: new _Deferred(), inflight: 0, finished: new _Deferred()}
+        this._request_queue.push(request)
         let f = ()=>{
             if (this.alive) {
                 this._sock.send(JSON.stringify({ action: 'upload', reqid: request_id, path: target, name: name}))
                 this._eventer.once(request_id, (data)=>{
                     let req = this._request_queue.shift()
-                    delete this._requests[req.id]
                     if (data.result == "success") {
                         req.finished.resolve(data)
                     } else {
                         req.finished.reject(data)
                     }
                 })
-                return this._requests[request_id].finished
+                return request.finished
             }
         }
         this._download_finished = this._download_finished.then(f, f)
@@ -1825,21 +1817,20 @@ class _Files extends _Tunnel {
 
     async download(source, target) {
         let request_id = `download_${this._get_request_id()}`
-        this._requests[request_id] = {id: request_id, type: "download", source: source, target: target, size: 0, finished: new _Deferred()}
-        this._request_queue.push(this._requests[request_id])
+        let request = {id: request_id, type: "download", source: source, target: target, size: 0, finished: new _Deferred()}
+        this._request_queue.push(request)
         let f = ()=>{
             if (this.alive) {
                 this._sock.send(JSON.stringify({ action: 'download', sub: 'start', id: request_id, path: source }))
                 this._eventer.once(request_id, (data)=>{
                     let req = this._request_queue.shift()
-                    delete this._requests[req.id]
                     if (data.result == "success") {
                         req.finished.resolve(data)
                     } else {
                         req.finished.reject(data)
                     }
                 })
-                return this._requests[request_id].finished
+                return request.finished
             }
         }
         this._download_finished = this._download_finished.then(f, f)
@@ -1916,7 +1907,6 @@ class _Files extends _Tunnel {
         var data = null;
         data = JSON.parse(raw_data)
         let req = this._request_queue.shift()
-        delete this._requests[req.id]
         req.finished.resolve(data)
     }
 
