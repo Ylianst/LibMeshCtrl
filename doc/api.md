@@ -1027,6 +1027,7 @@ Class to control a virtual file explorer on a remote device
 * [_Files](#_Files)
     * [new _Files(session, node_id)](#new__Files_new)
     * _instance_
+        * [.close()](#_Files+close)
         * [.ls(directory)](#_Files+ls) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
         * [.mkdir(directory)](#_Files+mkdir) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.rm(path, files, [recursive])](#_Files+rm) ⇒ <code>Promise.&lt;string&gt;</code>
@@ -1046,6 +1047,12 @@ Constructor for _Files
 | session | [<code>Session</code>](#Session) | Session representing a logged in user |
 | node_id | <code>string</code> | Node on which to open the file explorer |
 
+<a name="_Files+close"></a>
+
+### _Files.close()
+Close underlying connection and invalidate any outstanding requests
+
+**Kind**: instance method of [<code>\_Files</code>](#_Files)  
 <a name="_Files+ls"></a>
 
 ### _Files.ls(directory) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>

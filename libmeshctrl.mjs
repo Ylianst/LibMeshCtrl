@@ -1581,6 +1581,10 @@ class _Tunnel {
         return t
     }
 
+    close() {
+        this._sock.close()
+    }
+
     _on_verify_server(clientName, certs) { return null; }
 
     _initialize() {
@@ -1683,6 +1687,12 @@ class _Files extends _Tunnel {
      * @param {Session} session - Session representing a logged in user
      * @param {string} node_id - Node on which to open the file explorer
      * @returns {_Files} Instance of _Files which has been initialized
+     */
+
+     /** Close underlying connection and invalidate any outstanding requests
+     * @name _Files#close
+     * @function
+     * @instance
      */
 
 
