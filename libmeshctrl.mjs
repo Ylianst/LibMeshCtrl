@@ -3,7 +3,7 @@
 * @author Josiah Baldwin
 * @copyright Intel Corporation 2021-2021
 * @license Apache-2.0
-* @version v1.0.0
+* @version v1.2.0
 */
 
 import https_proxy_agent from 'https-proxy-agent'
@@ -124,6 +124,15 @@ let _make_bitwise_enum = (properties, {all_prop=null, none_prop=null, start_valu
  * @extends Error
  */
 class ServerError extends Error {
+    constructor(message) {
+        super(message)
+    }
+}
+
+/** Represents an error in the websocket
+ * @extends Error
+ */
+class SocketError extends Error {
     constructor(message) {
         super(message)
     }
@@ -360,12 +369,20 @@ class Session {
                 this.initialized.reject("Closed")
             }
             this.alive = false
-        });
+            for (let id of this._inflight) {
+                this._eventer.emit(id, new SocketError("Socket Closed"))
+            }
+            this._eventer.emit("close", new SocketError("Socket Closed"))
+        })
         this._sock.on('error', (err) => {
             this._socket_open.reject(err.code)
             this.initialized.reject(err.code)
             this.alive = false
-        });
+            for (let id of this._inflight) {
+                this._eventer.emit(id, new SocketError("Socket Error"))
+            }
+            this._eventer.emit("close", new SocketError("Socket Error"))
+        })
         this._sock.on('message', this._receive_message.bind(this))
     }
 
@@ -431,6 +448,9 @@ class Session {
     }
 
     async _send_command(data, name) {
+        if (!this.alive) {
+            throw new SocketError("Socket Closed")
+        }
         let id
         // This fixes a very theoretical bug with hash colisions in the case of an infinite number of requests. Now the bug will only happen if there are currently 2**32-1 of the same type of request going out at the same time.
         while (this._inflight.has(id = `meshctrl_${name}_${this._get_command_id()}`)){}
@@ -438,7 +458,11 @@ class Session {
         let p = new Promise((resolve, reject)=>{
             this._eventer.once(id, (data)=>{
                 this._inflight.delete(id)
-                resolve(data)
+                if (data instanceof Error) {
+                    reject(data)
+                } else {
+                    resolve(data)
+                }
             })
         })
         this._sock.send(JSON.stringify(Object.assign({}, data, { tag: id, responseid: id })))
@@ -448,9 +472,16 @@ class Session {
     // Some commands don't use response id in return, for some reason
     // Hopefully this bug gets fixed. If so, remove this function and fix everything using it
     async _send_command_no_response_id(data) {
+        if (!this.alive) {
+            throw new SocketError("Socket Closed")
+        }
         let p = new Promise((resolve, reject)=>{
             this._eventer.once(data.action, (data)=>{
-                resolve(data)
+                if (data instanceof Error) {
+                    reject(data)
+                } else {
+                    resolve(data)
+                }
             })
         })
         this._sock.send(JSON.stringify(data))
@@ -467,6 +498,7 @@ class Session {
      * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async send_invite_email(group, email, {name=null, message=null, meshid=null}={}){
         var op = { action: 'inviteAgent', email: email, name: '', os: '0' }
@@ -490,6 +522,7 @@ class Session {
      * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
      * @return {Promise<Object>} Invite link information
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async generate_invite_link(group, hours, {flags=null, meshid=null}={}) {
         var op = { action: 'createInviteLink', expire: hours, flags: 0 }
@@ -510,6 +543,7 @@ class Session {
      * List users on server. Admin Only.
      * @returns {Promise<Object[]>} List of users
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async list_users() {
         return this._send_command({action: "users"}, "list_users").then((data)=>{
@@ -523,6 +557,7 @@ class Session {
     /**
      * Get list of connected users. Admin Only.
      * @returns {Promise<Object[]>} List of user sessions
+     * @throws {SocketError} Info about socket closure
      */
     async list_user_sessions() {
         return this._send_command({action: "wssessioncount"}, "list_user_sessions").then((data)=>{
@@ -533,6 +568,7 @@ class Session {
     /**
      * Get user groups. Admin will get all user groups, otherwise get limited user groups
      * @returns {Promise<Object[]|null>} List of groups, or null if no groups are found
+     * @throws {SocketError} Info about socket closure
      */
     async list_user_groups() {
         return this._send_command({action: "usergroups"}, "list_user_groups").then((data)=>{
@@ -543,6 +579,7 @@ class Session {
     /**
      * Get device groups. Only returns meshes to which the logged in user has access
      * @returns {Promise<Object[]>} List of meshes
+     * @throws {SocketError} Info about socket closure
      */
     async list_device_groups() {
         return this._send_command({action: "meshes"}, "list_device_groups").then((data)=>{
@@ -557,6 +594,7 @@ class Session {
      * @param {string} [options.group=null] - Get devices from specific group by name. Overrides meshid
      * @param {string} [options.meshid=null] - Get devices from specific group by id
      * @returns {Promise<Object[]>} List of nodes
+     * @throws {SocketError} Info about socket closure
      */
     async list_devices({details=false, group=null, meshid=null}={}) {
         let command_list = []
@@ -595,6 +633,20 @@ class Session {
             }
             return nodes
         })
+    }
+
+    /**
+     * @callback Session~CloseCallback
+     * @param {SocketError} err - Error explaining the closure to the best of our ability
+     */
+
+    /**
+     * Listen for the socket to close
+     * @param {Session~CloseCallback} f - Function to call when the socket closes
+     */
+
+    on_close(f) {
+        this._eventer.on("close", f)
     }
 
     /**
@@ -637,6 +689,7 @@ class Session {
      * @param {string} [options.nodeid=null] - Filter by node
      * @param {number} [options.limit=null] - Limit to the N most recent events
      * @return {Promise<Object[]>} List of events
+     * @throws {SocketError} Info about socket closure
      */
     async list_events({userid=null, nodeid=null, limit=null}={}) {
         if ((typeof limit != 'number') || (limit < 1)) { limit = null; }
@@ -658,6 +711,7 @@ class Session {
     /** 
      * List login tokens for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @return {Promise<Object[]>} List of tokens
+     * @throws {SocketError} Info about socket closure
      */
     async list_login_tokens() {
         return this._send_command_no_response_id({ action: 'loginTokens' }).then((data)=>{
@@ -670,6 +724,7 @@ class Session {
      * @param {string} name - Name of token
      * @param {number} [expire=null] - Minutes until expiration. 0 or null for no expiration.
      * @return {Promise<Object>} Created token
+     * @throws {SocketError} Info about socket closure
      */
     async add_login_token(name, expire=null) {
         let cmd = { action: 'createLoginToken', name: name, expire: 0 }
@@ -686,6 +741,7 @@ class Session {
      * Remove login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} name - Name of token or token username
      * @return {Promise<Object[]>} List of remaining tokens
+     * @throws {SocketError} Info about socket closure
      */
     async remove_login_token(names) {
         if (typeof names === "string") {
@@ -724,6 +780,7 @@ class Session {
      * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async add_user(name, password, {randompass=false, domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}={}) {
         // Rights uses USERRIGHTS
@@ -758,6 +815,7 @@ class Session {
      * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async edit_user(userid, {domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}) {
         // Rights uses USERRIGHTS
@@ -786,6 +844,7 @@ class Session {
      * @param {string} userid - Unique userid
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async remove_user(userid) {
         if ((this._domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + this._domain + '/' + userid; }
@@ -803,6 +862,7 @@ class Session {
      * @param {string} [description=null] - Description of user group
      * @return {Promise<Object>} New user group
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async add_user_group(name, description=null) {
         let op = { action: 'createusergroup', name: name, desc: description };
@@ -823,6 +883,7 @@ class Session {
      * @param {string} userid - Unique userid
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async remove_user_group(groupid) {
         if ((this._domain != null) && (userid.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
@@ -843,6 +904,7 @@ class Session {
      * @param {string} groupid - Group to add the given user to
      * @return {Promise<string[]>} List of users that were successfully added
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async add_users_to_user_group(userids, groupid) {
         if (typeof userids === "string") {
@@ -872,6 +934,7 @@ class Session {
      * @param {string} groupid - Group to remove the given user from
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async remove_user_from_user_group(userid, groupid) {
         if ((this._domain != null) && (id.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
@@ -893,6 +956,7 @@ class Session {
      * @param {MESHRIGHTS} [rights=null] - Bitwise mask for the rights on the given mesh
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async add_users_to_device(userids, nodeid, rights=null) {
         if (typeof userids === "string") {
@@ -914,6 +978,7 @@ class Session {
      * @param {string|array} userids - Unique user id(s)
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async remove_users_from_device(nodeid, userids) {
         if (typeof(userids) === "string") { userids = [userids] }
@@ -936,6 +1001,7 @@ class Session {
      * @param {CONSENTFLAGS} [options.consent=0] - Bitwise consent flags to use for the group
      * @return {Promise<Object>} New device group
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async add_device_group(name, {description="", amtonly=false, features=0, consent=0}={}) {
         var op = { action: 'createmesh', meshname: name, meshtype: 2 };
@@ -960,6 +1026,7 @@ class Session {
      * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async remove_device_group(meshid, isname=false) {
         var op = { action: 'deletemesh', meshid: meshid};
@@ -989,6 +1056,7 @@ class Session {
      * @param {boolean} [options.interactiveonly=false] - Flag for invite codes
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async edit_device_group(meshid, {isname=false, name=null, description=null, flags=null, consent=null, invite_codes=null, backgroundonly=false, interactiveonly=false}={}) {
         var op = { action: 'editmesh', meshid: meshid};
@@ -1026,6 +1094,7 @@ class Session {
      * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async move_to_device_group(nodeids, meshid, isname=false) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
@@ -1050,6 +1119,7 @@ class Session {
      * @param {boolean} [options.isname=false] - Read meshid as a name rather than an id
      * @param {MESHRIGHTS} [options.rights=0] - Bitwise mask for the rights on the given mesh
      * @return {Promise<object>} Object showing which were added correctly and which were not, along with their result messages
+     * @throws {SocketError} Info about socket closure
      */
     async add_users_to_device_group(userids, meshid, {isname=false, rights=0}={}) {
         if (typeof userids === "string") {
@@ -1085,6 +1155,7 @@ class Session {
      * @param {string} meshid - Mesh to add the given user to
      * @param {boolean} [isname=false] - Read meshid as a name rather than an id
      * @return {Promise<Object>} Object showing which were removed correctly and which were not
+     * @throws {SocketError} Info about socket closure
      */
     async remove_users_from_device_group(userids, meshid, isname=false) {
         let requests = []
@@ -1119,6 +1190,7 @@ class Session {
      * @param {string} [userid=null] - Optional user to which to send the message
      * @return {Promise<boolean>} True if successful
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async broadcast(message, userid=null) {
         var op = { action: 'userbroadcast', msg: message };
@@ -1135,6 +1207,7 @@ class Session {
      * @param {string} nodeid - Unique id of desired node
      * @returns {Promise} Object containing all meaningful device info
      * @throws {ValueError} `Invalid device id` if device is not found
+     * @throws {SocketError} Info about socket closure
      */
     async device_info(nodeid) {
         let requests = []
@@ -1180,6 +1253,7 @@ class Session {
      * @param {CONSENTFLAGS} [options.consent=null] - New consent flags for device
      * @returns {Promise<boolean>} True if successful
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async edit_device(nodeid, {name=null, description=null, tags=null, icon=null, consent=null}={}) {
         let op = { action: 'changedevice', nodeid: nodeid };
@@ -1205,6 +1279,7 @@ class Session {
      * @param {boolean} [options.runasuseronly=false] - Error if we cannot run the command as the logged in user.
      * @returns {Promise<Object>} Object containing mapped output of the commands by device
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async run_command(nodeids, command, {powershell=false, runasuser=false, runasuseronly=false}={}) {
         let runAsUser = 0;
@@ -1267,6 +1342,7 @@ class Session {
     /** Wake up given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to wake
      * @returns {Promise<boolean>} True if successful
+     * @throws {SocketError} Info about socket closure
      */
     async wake_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
@@ -1278,6 +1354,7 @@ class Session {
     /** Reset given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to reset
      * @returns {Promise<boolean>} True if successful
+     * @throws {SocketError} Info about socket closure
      */
     async reset_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
@@ -1287,6 +1364,7 @@ class Session {
     /** Sleep given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to sleep
      * @returns {Promise<boolean>} True if successful
+     * @throws {SocketError} Info about socket closure
      */
     async sleep_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
@@ -1296,6 +1374,7 @@ class Session {
     /** Power off given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to power off
      * @returns {Promise<boolean>} True if successful
+     * @throws {SocketError} Info about socket closure
      */
     async power_off_devices(nodeids) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
@@ -1305,6 +1384,7 @@ class Session {
     /** List device shares of given node. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} nodeid - Unique id of nodes of which to list shares
      * @returns {Promise<Object[]>} Array of objects representing device shares
+     * @throws {SocketError} Info about socket closure
      */
     async list_device_shares(nodeid) {
         return this._send_command_no_response_id({ action: 'deviceShares', nodeid: nodeid }).then((data)=>{
@@ -1326,6 +1406,7 @@ class Session {
      * @param {number} [options.duration=60*60] - Duration in seconds for share to exist
      * @returns {Promise<Object>} Info about the newly created share
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async add_device_share(nodeid, name, {type=SHARINGTYPE.desktop, consent=null, start=null, end=null, duration=60*60}={}) {
         if (start === null) {
@@ -1364,6 +1445,7 @@ class Session {
      * @param {string} shareid - Unique share id to be removed
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async remove_device_share(nodeid, shareid) {
         return this._send_command({ action: 'removeDeviceShare', nodeid: nodeid, publicid: shareid }, "remove_device_share").then((data)=>{
@@ -1380,6 +1462,7 @@ class Session {
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {Error} `Failed to open url` if failure occurs
+     * @throws {SocketError} Info about socket closure
      */
     async device_open_url(nodeid, url) {
         return new Promise((resolve, reject)=>{
@@ -1405,6 +1488,7 @@ class Session {
      * @param {string} [title="MeshCentral"] - message title
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async device_message(nodeid, message, title="MeshCentral") {
         return this._send_command({ action: 'msg', type: 'messagebox', nodeid: nodeid, title: title, msg: message }, "device_message").then((data)=>{
@@ -1421,6 +1505,7 @@ class Session {
      * @param {string} [title="MeshCentral"] - message title
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      * @todo This function returns true even if it fails, because the server tells us it succeeds before it actually knows, then later tells us it failed, but it's hard to find taht because it looks exactly like a success.
      */
     async device_toast(nodeids, message, title="MeshCentral") {
@@ -1439,8 +1524,12 @@ class Session {
      * @param {string} [options.session=null] - Direct session to send to. Use this after you have made connection with a specific user session.
      * @param {string} [options.user=null] - Send message to all sessions of a particular user. One of these must be set.
      * @throws {ValueError} Value error if neither user nor session are given.
+     * @throws {SocketError} Info about socket closure
      */
     interuser(data, {session=null, user=null}={}) {
+        if (!this.alive) {
+            throw new SocketError("Socket Closed")
+        }
         if (session === null && user === null) {
             throw ValueError("No user or session given")
         }
@@ -1474,6 +1563,7 @@ class Session {
      * @param {string} source - Path from which to download from device
      * @param {WritableStream} [target=null] - Stream to which to write data. If null, create new PassThrough stream which is both readable and writable.
      * @returns {Promise<WritableStream>} The stream which has been downloaded into
+     * @throws {Error} String showing the intermediate outcome and how many bytes were downloaded
      */
     async download(nodeid, source, target=null) {
         let passthrough = false
@@ -1709,6 +1799,9 @@ class _Files extends _Tunnel {
     }
 
     async _send_command(data, name) {
+        if (!this.alive) {
+            throw new SocketError("Socket Closed")
+        }
         let id = `meshctrl_${name}_${this._get_request_id()}`
         let request = {id: id, type: name, finished: new _Deferred()}
         this._request_queue.push(request)
@@ -1725,6 +1818,7 @@ class _Files extends _Tunnel {
     /** Return a directory listing from the device
      * @param {string} directory - Path to the directory you wish to list
      * @returns {Promise<Object[]>} - An array of objects representing the directory listing
+     * @throws {SocketError} Info about socket closure
      */
     async ls(directory) {
         return this._send_command({action: "ls", path: directory}, "ls").then(data=>{
@@ -1735,6 +1829,7 @@ class _Files extends _Tunnel {
     /** Return a directory listing from the device
      * @param {string} directory - Path to the directory you wish to list
      * @returns {Promise<boolean>} - True if firectory creation succeeded
+     * @throws {SocketError} Info about socket closure
      */
     async mkdir(directory) {
         let l = this._session.listen_to_events((data)=>{
@@ -1758,6 +1853,7 @@ class _Files extends _Tunnel {
      * @param {boolean} [recursive=false] - Whether to delete the files recursively
      * @returns {Promise<string>} - Message returned from server
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async rm(path, files, recursive=false) {
         if (typeof(files) === "string") { files = [files] }
@@ -1782,6 +1878,7 @@ class _Files extends _Tunnel {
      * @param {string} new_name - New name to give the file
      * @returns {Promise<string>} - Message returned from server
      * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
      */
     async rename(path, name, new_name) {
         let l = this._session.listen_to_events((data)=>{

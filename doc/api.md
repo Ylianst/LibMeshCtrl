@@ -7,6 +7,9 @@
 <dt><a href="#ServerError">ServerError</a> ⇐ <code>Error</code></dt>
 <dd><p>Represents an error thrown from the server</p>
 </dd>
+<dt><a href="#SocketError">SocketError</a> ⇐ <code>Error</code></dt>
+<dd><p>Represents an error in the websocket</p>
+</dd>
 <dt><a href="#ValueError">ValueError</a> ⇐ <code>Error</code></dt>
 <dd><p>Represents an error in the user given input</p>
 </dd>
@@ -44,6 +47,13 @@ Represents an error thrown from the server
 
 **Kind**: global class  
 **Extends**: <code>Error</code>  
+<a name="SocketError"></a>
+
+## SocketError ⇐ <code>Error</code>
+Represents an error in the websocket
+
+**Kind**: global class  
+**Extends**: <code>Error</code>  
 <a name="ValueError"></a>
 
 ## ValueError ⇐ <code>Error</code>
@@ -78,6 +88,7 @@ Class for MeshCentral Session
         * [.list_user_groups()](#Session+list_user_groups) ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
         * [.list_device_groups()](#Session+list_device_groups) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
         * [.list_devices([options])](#Session+list_devices) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.on_close(f)](#Session+on_close)
         * [.listen_to_events(f, [filter])](#Session+listen_to_events) ⇒ <code>function</code>
         * [.stop_listening_to_events(Callback)](#Session+stop_listening_to_events)
         * [.list_events([options])](#Session+list_events) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
@@ -124,6 +135,7 @@ Class for MeshCentral Session
     * _static_
         * [.create(url, [options])](#Session.create) ⇒ [<code>Session</code>](#Session)
     * _inner_
+        * [~CloseCallback](#Session..CloseCallback) : <code>function</code>
         * [~EventCallback](#Session..EventCallback) : <code>function</code>
 
 <a name="new_Session_new"></a>
@@ -174,6 +186,7 @@ Send an invite email for a group or mesh
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -195,6 +208,7 @@ Generate an invite link for a group or mesh
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -215,6 +229,7 @@ List users on server. Admin Only.
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 <a name="Session+list_user_sessions"></a>
 
@@ -223,6 +238,10 @@ Get list of connected users. Admin Only.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of user sessions  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 <a name="Session+list_user_groups"></a>
 
 ### session.list\_user\_groups() ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
@@ -230,6 +249,10 @@ Get user groups. Admin will get all user groups, otherwise get limited user grou
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code> - List of groups, or null if no groups are found  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 <a name="Session+list_device_groups"></a>
 
 ### session.list\_device\_groups() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
@@ -237,6 +260,10 @@ Get device groups. Only returns meshes to which the logged in user has access
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of meshes  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 <a name="Session+list_devices"></a>
 
 ### session.list\_devices([options]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
@@ -244,6 +271,10 @@ Get devices to which the user has access.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of nodes  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -251,6 +282,17 @@ Get devices to which the user has access.
 | [options.details] | <code>boolean</code> | <code>false</code> | Get device details |
 | [options.group] | <code>string</code> | <code>null</code> | Get devices from specific group by name. Overrides meshid |
 | [options.meshid] | <code>string</code> | <code>null</code> | Get devices from specific group by id |
+
+<a name="Session+on_close"></a>
+
+### session.on\_close(f)
+Listen for the socket to close
+
+**Kind**: instance method of [<code>Session</code>](#Session)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| f | [<code>CloseCallback</code>](#Session..CloseCallback) | Function to call when the socket closes |
 
 <a name="Session+listen_to_events"></a>
 
@@ -283,6 +325,10 @@ List events visible to the currect user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of events  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -298,6 +344,10 @@ List login tokens for current user. WARNING: Non namespaced call. Calling this f
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of tokens  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 <a name="Session+add_login_token"></a>
 
 ### session.add\_login\_token(name, [expire]) ⇒ <code>Promise.&lt;Object&gt;</code>
@@ -305,6 +355,10 @@ Create login token for current user. WARNING: Non namespaced call. Calling this 
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Object&gt;</code> - Created token  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -318,6 +372,10 @@ Remove login token for current user. WARNING: Non namespaced call. Calling this 
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - List of remaining tokens  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -333,6 +391,7 @@ Add a new user
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -359,6 +418,7 @@ Edit an existing user
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -383,6 +443,7 @@ Remove an existing user
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -399,6 +460,7 @@ Create a new user group
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -416,6 +478,7 @@ Remove an existing user group
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -432,6 +495,7 @@ Add user(s) to an existing user group. WARNING: Non namespaced call. Calling thi
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -449,6 +513,7 @@ Remove user from an existing user group
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -466,6 +531,7 @@ Add a user to an existing node
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -484,6 +550,7 @@ Remove users from an existing node
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -501,6 +568,7 @@ Create a new device group
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -522,6 +590,7 @@ Remove an existing device group
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -539,6 +608,7 @@ Edit an existing device group
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -564,6 +634,7 @@ Move a device from one group to another
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -579,6 +650,10 @@ Add a user to an existing mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;object&gt;</code> - Object showing which were added correctly and which were not, along with their result messages  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -595,6 +670,10 @@ Remove users from an existing mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Object&gt;</code> - Object showing which were removed correctly and which were not  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -612,6 +691,7 @@ Broadcast a message to all users or a single user
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -629,6 +709,7 @@ Get all info for a given device. WARNING: Non namespaced call. Calling this func
 **Throws**:
 
 - [<code>ValueError</code>](#ValueError) `Invalid device id` if device is not found
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -645,6 +726,7 @@ Edit properties of an existing device
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -667,6 +749,7 @@ Run a command on any number of nodes. WARNING: Non namespaced call. Calling this
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -710,6 +793,10 @@ Wake up given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;boolean&gt;</code> - True if successful  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -722,6 +809,10 @@ Reset given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;boolean&gt;</code> - True if successful  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -734,6 +825,10 @@ Sleep given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;boolean&gt;</code> - True if successful  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -746,6 +841,10 @@ Power off given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;boolean&gt;</code> - True if successful  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -758,6 +857,10 @@ List device shares of given node. WARNING: Non namespaced call. Calling this fun
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - Array of objects representing device shares  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -773,6 +876,7 @@ Add device share to given node. WARNING: Non namespaced call. Calling this funct
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -796,6 +900,7 @@ Remove a device share
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -814,6 +919,7 @@ Open url in browser on device. WARNING: Non namespaced call. Calling this functi
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - <code>Error</code> `Failed to open url` if failure occurs
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
@@ -831,6 +937,7 @@ Display a message on remote device.
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -849,6 +956,7 @@ Popup a toast a message on remote device.
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 **Todo**
 
@@ -870,6 +978,7 @@ Fire off an interuser message. This is a fire and forget api, we have no way of 
 **Throws**:
 
 - [<code>ValueError</code>](#ValueError) Value error if neither user nor session are given.
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -914,6 +1023,10 @@ Download a file from a device into a writable stream. This creates an _File and 
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;WritableStream&gt;</code> - The stream which has been downloaded into  
+**Throws**:
+
+- <code>Error</code> String showing the intermediate outcome and how many bytes were downloaded
+
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -965,6 +1078,15 @@ Factory for Session
 | [options.loginkey] | <code>string</code> | <code>null</code> | Key from already handled login. Overrides username/password. |
 | [options.proxy] | <code>string</code> | <code>null</code> | "url:port" to use for proxy server |
 | [options.token] | <code>string</code> | <code>null</code> | Login token. This appears to be superfluous |
+
+<a name="Session..CloseCallback"></a>
+
+### Session~CloseCallback : <code>function</code>
+**Kind**: inner typedef of [<code>Session</code>](#Session)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| err | [<code>SocketError</code>](#SocketError) | Error explaining the closure to the best of our ability |
 
 <a name="Session..EventCallback"></a>
 
@@ -1060,6 +1182,10 @@ Return a directory listing from the device
 
 **Kind**: instance method of [<code>\_Files</code>](#_Files)  
 **Returns**: <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code> - - An array of objects representing the directory listing  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1072,6 +1198,10 @@ Return a directory listing from the device
 
 **Kind**: instance method of [<code>\_Files</code>](#_Files)  
 **Returns**: <code>Promise.&lt;boolean&gt;</code> - - True if firectory creation succeeded  
+**Throws**:
+
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1087,6 +1217,7 @@ Remove files/folder from the device. This API doesn't error if the file doesn't 
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Default | Description |
@@ -1105,6 +1236,7 @@ Rename a file or folder on the device. This API doesn't error if the file doesn'
 **Throws**:
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
 
 
 | Param | Type | Description |
