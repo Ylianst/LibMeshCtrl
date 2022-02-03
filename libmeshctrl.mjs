@@ -1302,16 +1302,19 @@ class Session {
         return new Promise((resolve, reject)=>{
             let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]))
             let l = this.listen_to_events((data)=>{
-                if (data.value === "Run commands completed.") {
-                    result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true})
-                    if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
-                        resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])))
-                        this.stop_listening_to_events(l)
+                console.log(data)
+                if (match_nodeid(data.nodeid, nodeids)) {
+                    if (data.value === "Run commands completed.") {
+                        result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true})
+                        if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
+                            resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])))
+                            this.stop_listening_to_events(l)
+                        }
+                    } else if (data.value.startsWith("Run commands")) {
+                        return
                     }
-                } else if (data.value.startsWith("Run commands")) {
-                    return
+                    result[match_nodeid(data.nodeid, nodeids)].result.push(data.value)
                 }
-                result[match_nodeid(data.nodeid, nodeids)].result.push(data.value)
             }, {action: "msg", type: "console"})
             this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command").then((data)=>{
                 if (data.result && data.result.toLowerCase() !== "ok") {
