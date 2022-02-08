@@ -1302,7 +1302,6 @@ class Session {
         return new Promise((resolve, reject)=>{
             let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]))
             let l = this.listen_to_events((data)=>{
-                console.log(data)
                 if (match_nodeid(data.nodeid, nodeids)) {
                     if (data.value === "Run commands completed.") {
                         result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true})
