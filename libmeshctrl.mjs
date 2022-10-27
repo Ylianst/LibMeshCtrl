@@ -1232,7 +1232,12 @@ class Session {
                         if (nodes.nodes[m][n]._id.indexOf(nodeid) >= 0) { node = nodes.nodes[m][n]; }
                     }
                 }
+                sysinfo["node"] = node
+                sysinfo["nodeid"] = nodeid
+                delete sysinfo["result"]
+                delete sysinfo["noinfo"]
             }
+            
             if (node == null) {
                 throw new ValueError("Invalid device id")
             }
