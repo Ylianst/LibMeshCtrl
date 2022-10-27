@@ -1229,7 +1229,7 @@ class Session {
                 // This device does not have system information, get node information from the nodes list.
                 for (var m in nodes.nodes) {
                     for (var n in nodes.nodes[m]) {
-                        if (nodes.nodes[m][n]._id.indexOf(nodeid) >= 0) { node = nodes.nodes[m][n]; }
+                        if (nodes.nodes[m][n]._id.indexOf(nodeid) >= 0) { node = nodes.nodes[m][n]; node["meshid"] = m}
                     }
                 }
                 sysinfo["node"] = node
