@@ -3,12 +3,11 @@
 * @author Josiah Baldwin
 * @copyright Intel Corporation 2021-2021
 * @license Apache-2.0
-* @version v1.2.0
+* @version v2.0.0
 */
 
 import https_proxy_agent from 'https-proxy-agent'
 import crypto from 'crypto'
-import path from "path"
 import fs from "fs"
 import ws from "ws"
 import { default as urllib } from "url" //We use url as a variable down there a lot, so namespace this as a library
@@ -2204,4 +2203,4 @@ let _Internal = {
     _make_bitwise_enum
 }
 
-export {Session as default, Session, MESHRIGHTS, USERRIGHTS, CONSENTFLAGS, MESHFEATURES, SHARINGTYPE, SHARINGTYPENUM, PROTOCOL, ICON, _Internal}
+export {Session, MESHRIGHTS, USERRIGHTS, CONSENTFLAGS, MESHFEATURES, SHARINGTYPE, SHARINGTYPENUM, PROTOCOL, ICON, _Internal}

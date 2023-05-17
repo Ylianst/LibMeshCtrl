@@ -4,7 +4,7 @@ Library for remotely interacting with a [MeshCentral](https://meshcentral.com/) 
 
 ## Installation
 
-npm install --save https://github.com/Ylianst/LibMeshCtrl
+yarn add libmeshctrl
 
 ## Usage
 
