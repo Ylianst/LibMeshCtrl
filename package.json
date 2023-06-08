@@ -1,6 +1,6 @@
 {
     "name": "libmeshctrl",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "API for remotely interacting with a MeshCentral server instance",
     "author": "Josiah Baldwin",
     "license": "Apache-2.0",
@@ -25,10 +25,10 @@
             "require": "./dist/libmeshctrl.cjs"
         }
     },
-      "main": "./dist/libmeshctrl.mjs",
-      "files": [
+    "main": "./dist/libmeshctrl.mjs",
+    "files": [
         "dist"
-      ],
+    ],
     "type": "module",
     "devDependencies": {
         "jsdoc-to-markdown": "~7.1.0",

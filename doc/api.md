@@ -13,6 +13,9 @@
 <dt><a href="#ValueError">ValueError</a> ⇐ <code>Error</code></dt>
 <dd><p>Represents an error in the user given input</p>
 </dd>
+<dt><a href="#TimeoutError">TimeoutError</a> ⇐ <code>Error</code></dt>
+<dd><p>Represents that a command timed out</p>
+</dd>
 <dt><a href="#Session">Session</a></dt>
 <dd><p>Class for MeshCentral Session</p>
 </dd>
@@ -61,6 +64,13 @@ Represents an error in the user given input
 
 **Kind**: global class  
 **Extends**: <code>Error</code>  
+<a name="TimeoutError"></a>
+
+## TimeoutError ⇐ <code>Error</code>
+Represents that a command timed out
+
+**Kind**: global class  
+**Extends**: <code>Error</code>  
 <a name="Session"></a>
 
 ## Session
@@ -81,51 +91,51 @@ Class for MeshCentral Session
         * [.close()](#Session+close)
         * [.server_info()](#Session+server_info) ⇒ <code>Promise.&lt;Object&gt;</code>
         * [.user_info()](#Session+user_info) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.send_invite_email(group, email, [options])](#Session+send_invite_email) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.generate_invite_link(group, hours, [options])](#Session+generate_invite_link) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.list_users()](#Session+list_users) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.list_user_sessions()](#Session+list_user_sessions) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.list_user_groups()](#Session+list_user_groups) ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
-        * [.list_device_groups()](#Session+list_device_groups) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.list_devices([options])](#Session+list_devices) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.send_invite_email(group, email, [options], [timeout])](#Session+send_invite_email) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.generate_invite_link(group, hours, [options], [timeout])](#Session+generate_invite_link) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.list_users([timeout])](#Session+list_users) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_user_sessions([timeout])](#Session+list_user_sessions) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_user_groups([timeout])](#Session+list_user_groups) ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
+        * [.list_device_groups([timeout])](#Session+list_device_groups) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_devices([options], [timeout])](#Session+list_devices) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
         * [.on_close(f)](#Session+on_close)
         * [.listen_to_events(f, [filter])](#Session+listen_to_events) ⇒ <code>function</code>
         * [.stop_listening_to_events(Callback)](#Session+stop_listening_to_events)
-        * [.list_events([options])](#Session+list_events) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.list_login_tokens()](#Session+list_login_tokens) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.add_login_token(name, [expire])](#Session+add_login_token) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.remove_login_token(name)](#Session+remove_login_token) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.add_user(name, password, [options])](#Session+add_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.edit_user(userid, [options])](#Session+edit_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.remove_user(userid)](#Session+remove_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.add_user_group(name, [description])](#Session+add_user_group) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.remove_user_group(userid)](#Session+remove_user_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.add_users_to_user_group(ids, groupid)](#Session+add_users_to_user_group) ⇒ <code>Promise.&lt;Array.&lt;string&gt;&gt;</code>
-        * [.remove_user_from_user_group(id, groupid)](#Session+remove_user_from_user_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.add_users_to_device(userids, nodeid, [rights])](#Session+add_users_to_device) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.remove_users_from_device(nodeid, userids)](#Session+remove_users_from_device) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.add_device_group(name, [options])](#Session+add_device_group) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.remove_device_group(meshid, [isname])](#Session+remove_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.edit_device_group(meshid, [options])](#Session+edit_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.move_to_device_group(nodeids, meshid, [isname])](#Session+move_to_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
-        * [.add_users_to_device_group(userids, meshid, [options])](#Session+add_users_to_device_group) ⇒ <code>Promise.&lt;object&gt;</code>
-        * [.remove_users_from_device_group(userids, meshid, [isname])](#Session+remove_users_from_device_group) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.broadcast(message, [userid])](#Session+broadcast) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.device_info(nodeid)](#Session+device_info) ⇒ <code>Promise</code>
-        * [.edit_device(nodeid, [options])](#Session+edit_device) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.run_command(nodeids, command, [options])](#Session+run_command) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.list_events([options], [timeout])](#Session+list_events) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.list_login_tokens([timeout])](#Session+list_login_tokens) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.add_login_token(name, [expire], [timeout])](#Session+add_login_token) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_login_token(name, [timeout])](#Session+remove_login_token) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.add_user(name, password, [options], [timeout])](#Session+add_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.edit_user(userid, [options], [timeout])](#Session+edit_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.remove_user(userid, [timeout])](#Session+remove_user) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_user_group(name, [description], [timeout])](#Session+add_user_group) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_user_group(userid, [timeout])](#Session+remove_user_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_users_to_user_group(ids, groupid, [timeout])](#Session+add_users_to_user_group) ⇒ <code>Promise.&lt;Array.&lt;string&gt;&gt;</code>
+        * [.remove_user_from_user_group(id, groupid, [timeout])](#Session+remove_user_from_user_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_users_to_device(userids, nodeid, [rights], [timeout])](#Session+add_users_to_device) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.remove_users_from_device(nodeid, userids, [timeout])](#Session+remove_users_from_device) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_device_group(name, [options], [timeout])](#Session+add_device_group) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_device_group(meshid, [isname], [timeout])](#Session+remove_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.edit_device_group(meshid, [options], [timeout])](#Session+edit_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.move_to_device_group(nodeids, meshid, [isname], [timeout])](#Session+move_to_device_group) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+        * [.add_users_to_device_group(userids, meshid, [options], [timeout])](#Session+add_users_to_device_group) ⇒ <code>Promise.&lt;object&gt;</code>
+        * [.remove_users_from_device_group(userids, meshid, [isname], [timeout])](#Session+remove_users_from_device_group) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.broadcast(message, [userid], [timeout])](#Session+broadcast) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.device_info(nodeid, [timeout])](#Session+device_info) ⇒ <code>Promise</code>
+        * [.edit_device(nodeid, [options], [timeout])](#Session+edit_device) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.run_command(nodeids, command, [options], [timeout])](#Session+run_command) ⇒ <code>Promise.&lt;Object&gt;</code>
         * [.shell(nodeid)](#Session+shell) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
         * [.smart_shell(nodeid, regex)](#Session+smart_shell) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
-        * [.wake_devices(nodeids)](#Session+wake_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.reset_devices(nodeids)](#Session+reset_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.sleep_devices(nodeids)](#Session+sleep_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.power_off_devices(nodeids)](#Session+power_off_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.list_device_shares(nodeid)](#Session+list_device_shares) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
-        * [.add_device_share(nodeid, name, [options])](#Session+add_device_share) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.remove_device_share(nodeid, shareid)](#Session+remove_device_share) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.device_open_url(nodeid, url)](#Session+device_open_url) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.device_message(nodeid, message, [title])](#Session+device_message) ⇒ <code>Promise.&lt;boolean&gt;</code>
-        * [.device_toast(nodeids, message, [title])](#Session+device_toast) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.wake_devices(nodeids, [timeout])](#Session+wake_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.reset_devices(nodeids, [timeout])](#Session+reset_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.sleep_devices(nodeids, [timeout])](#Session+sleep_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.power_off_devices(nodeids, [timeout])](#Session+power_off_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.list_device_shares(nodeid, [timeout])](#Session+list_device_shares) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+        * [.add_device_share(nodeid, name, [options], [timeout])](#Session+add_device_share) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.remove_device_share(nodeid, shareid, [timeout])](#Session+remove_device_share) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.device_open_url(nodeid, url, [timeout])](#Session+device_open_url) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.device_message(nodeid, message, [title], [timeout])](#Session+device_message) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.device_toast(nodeids, message, [title], [timeout])](#Session+device_toast) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.interuser(data, [options])](#Session+interuser)
         * [.upload(nodeid, source, target)](#Session+upload) ⇒ <code>Promise.&lt;Object&gt;</code>
         * [.upload_file(nodeid, filepath, target)](#Session+upload_file) ⇒ <code>Promise.&lt;Object&gt;</code>
@@ -178,7 +188,7 @@ Get user information
 **Returns**: <code>Promise.&lt;Object&gt;</code> - User info  
 <a name="Session+send_invite_email"></a>
 
-### session.send\_invite\_email(group, email, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.send\_invite\_email(group, email, [options], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Send an invite email for a group or mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -187,6 +197,7 @@ Send an invite email for a group or mesh
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -197,10 +208,11 @@ Send an invite email for a group or mesh
 | [options.name] | <code>string</code> | <code>null</code> | User's name. For display purposes. |
 | [options.message] | <code>string</code> | <code>null</code> | Message to send to user in invite email |
 | [options.meshid] | <code>string</code> | <code>null</code> | ID of mesh which to invite user. Overrides "group" |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+generate_invite_link"></a>
 
-### session.generate\_invite\_link(group, hours, [options]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.generate\_invite\_link(group, hours, [options], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Generate an invite link for a group or mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -209,6 +221,7 @@ Generate an invite link for a group or mesh
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -218,10 +231,11 @@ Generate an invite link for a group or mesh
 | [options] | <code>Object</code> | <code>{}</code> |  |
 | [options.flags] | [<code>MESHRIGHTS</code>](#MESHRIGHTS) | <code></code> | Bitwise flags for MESHRIGHTS |
 | [options.meshid] | <code>string</code> | <code>null</code> | ID of mesh which to invite user. Overrides "group" |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_users"></a>
 
-### session.list\_users() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_users([timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List users on server. Admin Only.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -230,10 +244,16 @@ List users on server. Admin Only.
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_user_sessions"></a>
 
-### session.list\_user\_sessions() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_user\_sessions([timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Get list of connected users. Admin Only.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -241,10 +261,16 @@ Get list of connected users. Admin Only.
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_user_groups"></a>
 
-### session.list\_user\_groups() ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
+### session.list\_user\_groups([timeout]) ⇒ <code>Promise.&lt;(Array.&lt;Object&gt;\|null)&gt;</code>
 Get user groups. Admin will get all user groups, otherwise get limited user groups
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -252,10 +278,16 @@ Get user groups. Admin will get all user groups, otherwise get limited user grou
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_device_groups"></a>
 
-### session.list\_device\_groups() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_device\_groups([timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Get device groups. Only returns meshes to which the logged in user has access
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -263,10 +295,16 @@ Get device groups. Only returns meshes to which the logged in user has access
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_devices"></a>
 
-### session.list\_devices([options]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_devices([options], [timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Get devices to which the user has access.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -274,6 +312,7 @@ Get devices to which the user has access.
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -282,6 +321,7 @@ Get devices to which the user has access.
 | [options.details] | <code>boolean</code> | <code>false</code> | Get device details |
 | [options.group] | <code>string</code> | <code>null</code> | Get devices from specific group by name. Overrides meshid |
 | [options.meshid] | <code>string</code> | <code>null</code> | Get devices from specific group by id |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+on_close"></a>
 
@@ -320,7 +360,7 @@ Stop listening to server events
 
 <a name="Session+list_events"></a>
 
-### session.list\_events([options]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_events([options], [timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List events visible to the currect user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -328,6 +368,7 @@ List events visible to the currect user
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -336,10 +377,11 @@ List events visible to the currect user
 | [options.userid] | <code>string</code> | <code>null</code> | Filter by user. Overrides nodeid. |
 | [options.nodeid] | <code>string</code> | <code>null</code> | Filter by node |
 | [options.limit] | <code>number</code> | <code></code> | Limit to the N most recent events |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_login_tokens"></a>
 
-### session.list\_login\_tokens() ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_login\_tokens([timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List login tokens for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -347,10 +389,16 @@ List login tokens for current user. WARNING: Non namespaced call. Calling this f
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_login_token"></a>
 
-### session.add\_login\_token(name, [expire]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.add\_login\_token(name, [expire], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Create login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -358,16 +406,18 @@ Create login token for current user. WARNING: Non namespaced call. Calling this 
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | name | <code>string</code> |  | Name of token |
 | [expire] | <code>number</code> | <code></code> | Minutes until expiration. 0 or null for no expiration. |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_login_token"></a>
 
-### session.remove\_login\_token(name) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.remove\_login\_token(name, [timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 Remove login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -375,15 +425,17 @@ Remove login token for current user. WARNING: Non namespaced call. Calling this 
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| name | <code>string</code> | Name of token or token username |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| name | <code>string</code> |  | Name of token or token username |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_user"></a>
 
-### session.add\_user(name, password, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.add\_user(name, password, [options], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Add a new user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -392,6 +444,7 @@ Add a new user
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -407,10 +460,11 @@ Add a new user
 | [options.realname] | <code>string</code> | <code>null</code> | User's real name |
 | [options.phone] | <code>string</code> | <code>null</code> | User's phone number |
 | [options.rights] | [<code>USERRIGHTS</code>](#USERRIGHTS) | <code></code> | Bitwise mask of user's rights on the server |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+edit_user"></a>
 
-### session.edit\_user(userid, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.edit\_user(userid, [options], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Edit an existing user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -419,6 +473,7 @@ Edit an existing user
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -432,10 +487,11 @@ Edit an existing user
 | [options.realname] | <code>string</code> | <code>null</code> | User's real name |
 | [options.phone] | <code>string</code> | <code>null</code> | User's phone number |
 | [options.rights] | [<code>USERRIGHTS</code>](#USERRIGHTS) | <code></code> | Bitwise mask of user's rights on the server |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_user"></a>
 
-### session.remove\_user(userid) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.remove\_user(userid, [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove an existing user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -444,15 +500,17 @@ Remove an existing user
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| userid | <code>string</code> | Unique userid |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| userid | <code>string</code> |  | Unique userid |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_user_group"></a>
 
-### session.add\_user\_group(name, [description]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.add\_user\_group(name, [description], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Create a new user group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -461,16 +519,18 @@ Create a new user group
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | name | <code>string</code> |  | Name of usergroup |
 | [description] | <code>string</code> | <code>null</code> | Description of user group |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_user_group"></a>
 
-### session.remove\_user\_group(userid) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.remove\_user\_group(userid, [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove an existing user group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -479,15 +539,17 @@ Remove an existing user group
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| userid | <code>string</code> | Unique userid |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| userid | <code>string</code> |  | Unique userid |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_users_to_user_group"></a>
 
-### session.add\_users\_to\_user\_group(ids, groupid) ⇒ <code>Promise.&lt;Array.&lt;string&gt;&gt;</code>
+### session.add\_users\_to\_user\_group(ids, groupid, [timeout]) ⇒ <code>Promise.&lt;Array.&lt;string&gt;&gt;</code>
 Add user(s) to an existing user group. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -496,16 +558,18 @@ Add user(s) to an existing user group. WARNING: Non namespaced call. Calling thi
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| ids | <code>string</code> \| <code>array</code> | Unique user id(s) |
-| groupid | <code>string</code> | Group to add the given user to |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| ids | <code>string</code> \| <code>array</code> |  | Unique user id(s) |
+| groupid | <code>string</code> |  | Group to add the given user to |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_user_from_user_group"></a>
 
-### session.remove\_user\_from\_user\_group(id, groupid) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.remove\_user\_from\_user\_group(id, groupid, [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove user from an existing user group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -514,16 +578,18 @@ Remove user from an existing user group
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| id | <code>string</code> | Unique user id |
-| groupid | <code>string</code> | Group to remove the given user from |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| id | <code>string</code> |  | Unique user id |
+| groupid | <code>string</code> |  | Group to remove the given user from |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_users_to_device"></a>
 
-### session.add\_users\_to\_device(userids, nodeid, [rights]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.add\_users\_to\_device(userids, nodeid, [rights], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Add a user to an existing node
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -532,6 +598,7 @@ Add a user to an existing node
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -539,10 +606,11 @@ Add a user to an existing node
 | userids | <code>string</code> \| <code>array</code> |  | Unique user id(s) |
 | nodeid | <code>string</code> |  | Node to add the given user to |
 | [rights] | [<code>MESHRIGHTS</code>](#MESHRIGHTS) | <code></code> | Bitwise mask for the rights on the given mesh |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_users_from_device"></a>
 
-### session.remove\_users\_from\_device(nodeid, userids) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.remove\_users\_from\_device(nodeid, userids, [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove users from an existing node
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -551,16 +619,18 @@ Remove users from an existing node
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Node to remove the given users from |
-| userids | <code>string</code> \| <code>array</code> | Unique user id(s) |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Node to remove the given users from |
+| userids | <code>string</code> \| <code>array</code> |  | Unique user id(s) |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_device_group"></a>
 
-### session.add\_device\_group(name, [options]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.add\_device\_group(name, [options], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Create a new device group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -569,6 +639,7 @@ Create a new device group
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -579,10 +650,11 @@ Create a new device group
 | [options.amtonly] | <code>boolean</code> | <code>false</code> | - |
 | [options.features] | [<code>MESHFEATURES</code>](#MESHFEATURES) | <code>0</code> | Bitwise features to enable on the group |
 | [options.consent] | [<code>CONSENTFLAGS</code>](#CONSENTFLAGS) | <code>0</code> | Bitwise consent flags to use for the group |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_device_group"></a>
 
-### session.remove\_device\_group(meshid, [isname]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.remove\_device\_group(meshid, [isname], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Remove an existing device group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -591,16 +663,18 @@ Remove an existing device group
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | meshid | <code>string</code> |  | Unique id of device group |
 | [isname] | <code>boolean</code> | <code>false</code> | treat "meshid" as a name instead of an id |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+edit_device_group"></a>
 
-### session.edit\_device\_group(meshid, [options]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.edit\_device\_group(meshid, [options], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Edit an existing device group
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -609,6 +683,7 @@ Edit an existing device group
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -623,10 +698,11 @@ Edit an existing device group
 | [options.invite_codes] | <code>Array.&lt;string&gt;</code> | <code></code> | Create new invite codes |
 | [options.backgroundonly] | <code>boolean</code> | <code>false</code> | Flag for invite codes |
 | [options.interactiveonly] | <code>boolean</code> | <code>false</code> | Flag for invite codes |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+move_to_device_group"></a>
 
-### session.move\_to\_device\_group(nodeids, meshid, [isname]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
+### session.move\_to\_device\_group(nodeids, meshid, [isname], [timeout]) ⇒ <code>Promise.&lt;Boolean&gt;</code>
 Move a device from one group to another
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -635,6 +711,7 @@ Move a device from one group to another
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -642,10 +719,11 @@ Move a device from one group to another
 | nodeids | <code>string</code> \| <code>array</code> |  | Unique node id(s) |
 | meshid | <code>string</code> |  | Unique mesh id |
 | [isname] | <code>boolean</code> | <code>false</code> | treat "meshid" as a name instead of an id |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_users_to_device_group"></a>
 
-### session.add\_users\_to\_device\_group(userids, meshid, [options]) ⇒ <code>Promise.&lt;object&gt;</code>
+### session.add\_users\_to\_device\_group(userids, meshid, [options], [timeout]) ⇒ <code>Promise.&lt;object&gt;</code>
 Add a user to an existing mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -653,6 +731,7 @@ Add a user to an existing mesh
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -662,10 +741,11 @@ Add a user to an existing mesh
 | [options] | <code>Object</code> | <code>{}</code> |  |
 | [options.isname] | <code>boolean</code> | <code>false</code> | Read meshid as a name rather than an id |
 | [options.rights] | [<code>MESHRIGHTS</code>](#MESHRIGHTS) | <code>0</code> | Bitwise mask for the rights on the given mesh |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_users_from_device_group"></a>
 
-### session.remove\_users\_from\_device\_group(userids, meshid, [isname]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.remove\_users\_from\_device\_group(userids, meshid, [isname], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Remove users from an existing mesh
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -673,6 +753,7 @@ Remove users from an existing mesh
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -680,10 +761,11 @@ Remove users from an existing mesh
 | userids | <code>string</code> \| <code>array</code> |  | Unique user id(s) |
 | meshid | <code>string</code> |  | Mesh to add the given user to |
 | [isname] | <code>boolean</code> | <code>false</code> | Read meshid as a name rather than an id |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+broadcast"></a>
 
-### session.broadcast(message, [userid]) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.broadcast(message, [userid], [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Broadcast a message to all users or a single user
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -692,16 +774,18 @@ Broadcast a message to all users or a single user
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | message | <code>string</code> |  | Message to broadcast |
 | [userid] | <code>string</code> | <code>null</code> | Optional user to which to send the message |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+device_info"></a>
 
-### session.device\_info(nodeid) ⇒ <code>Promise</code>
+### session.device\_info(nodeid, [timeout]) ⇒ <code>Promise</code>
 Get all info for a given device. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -710,15 +794,17 @@ Get all info for a given device. WARNING: Non namespaced call. Calling this func
 
 - [<code>ValueError</code>](#ValueError) `Invalid device id` if device is not found
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id of desired node |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id of desired node |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+edit_device"></a>
 
-### session.edit\_device(nodeid, [options]) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.edit\_device(nodeid, [options], [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Edit properties of an existing device
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -727,6 +813,7 @@ Edit properties of an existing device
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -738,10 +825,11 @@ Edit properties of an existing device
 | [options.tags] | <code>string</code> \| <code>Array.&lt;string&gt;</code> | <code>null</code> | New tags for device |
 | [options.icon] | [<code>ICON</code>](#ICON) | <code></code> | New icon for device |
 | [options.consent] | [<code>CONSENTFLAGS</code>](#CONSENTFLAGS) | <code></code> | New consent flags for device |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+run_command"></a>
 
-### session.run\_command(nodeids, command, [options]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.run\_command(nodeids, command, [options], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Run a command on any number of nodes. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -750,6 +838,7 @@ Run a command on any number of nodes. WARNING: Non namespaced call. Calling this
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -760,6 +849,7 @@ Run a command on any number of nodes. WARNING: Non namespaced call. Calling this
 | [options.powershell] | <code>boolean</code> | <code>false</code> | Use powershell to run command. Only available on Windows. |
 | [options.runasuser] | <code>boolean</code> | <code>false</code> | Attempt to run as a user instead of the root permissions given to the agent. Fall back to root if we cannot. |
 | [options.runasuseronly] | <code>boolean</code> | <code>false</code> | Error if we cannot run the command as the logged in user. |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+shell"></a>
 
@@ -788,7 +878,7 @@ Open a smart terminal shell on the given device
 
 <a name="Session+wake_devices"></a>
 
-### session.wake\_devices(nodeids) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.wake\_devices(nodeids, [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Wake up given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -796,15 +886,17 @@ Wake up given devices
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> | Unique ids of nodes which to wake |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> |  | Unique ids of nodes which to wake |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+reset_devices"></a>
 
-### session.reset\_devices(nodeids) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.reset\_devices(nodeids, [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Reset given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -812,15 +904,17 @@ Reset given devices
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> | Unique ids of nodes which to reset |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> |  | Unique ids of nodes which to reset |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+sleep_devices"></a>
 
-### session.sleep\_devices(nodeids) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.sleep\_devices(nodeids, [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Sleep given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -828,15 +922,17 @@ Sleep given devices
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> | Unique ids of nodes which to sleep |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> |  | Unique ids of nodes which to sleep |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+power_off_devices"></a>
 
-### session.power\_off\_devices(nodeids) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.power\_off\_devices(nodeids, [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Power off given devices
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -844,15 +940,17 @@ Power off given devices
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> | Unique ids of nodes which to power off |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> |  | Unique ids of nodes which to power off |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+list_device_shares"></a>
 
-### session.list\_device\_shares(nodeid) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
+### session.list\_device\_shares(nodeid, [timeout]) ⇒ <code>Promise.&lt;Array.&lt;Object&gt;&gt;</code>
 List device shares of given node. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -860,15 +958,17 @@ List device shares of given node. WARNING: Non namespaced call. Calling this fun
 **Throws**:
 
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id of nodes of which to list shares |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id of nodes of which to list shares |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+add_device_share"></a>
 
-### session.add\_device\_share(nodeid, name, [options]) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.add\_device\_share(nodeid, name, [options], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Add device share to given node. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -877,6 +977,7 @@ Add device share to given node. WARNING: Non namespaced call. Calling this funct
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -889,10 +990,11 @@ Add device share to given node. WARNING: Non namespaced call. Calling this funct
 | [options.start] | <code>number</code> \| <code>Date</code> | <code>new Date()</code> | When to start the share |
 | [options.end] | <code>number</code> \| <code>Date</code> | <code></code> | When to end the share. If null, use duration instead |
 | [options.duration] | <code>number</code> | <code>60*60</code> | Duration in seconds for share to exist |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+remove_device_share"></a>
 
-### session.remove\_device\_share(nodeid, shareid) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.remove\_device\_share(nodeid, shareid, [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Remove a device share
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -901,16 +1003,18 @@ Remove a device share
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique node from which to remove the share |
-| shareid | <code>string</code> | Unique share id to be removed |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique node from which to remove the share |
+| shareid | <code>string</code> |  | Unique share id to be removed |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+device_open_url"></a>
 
-### session.device\_open\_url(nodeid, url) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.device\_open\_url(nodeid, url, [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Open url in browser on device. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -920,16 +1024,18 @@ Open url in browser on device. WARNING: Non namespaced call. Calling this functi
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - <code>Error</code> `Failed to open url` if failure occurs
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique node from which to remove the share |
-| url | <code>string</code> | url to open |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique node from which to remove the share |
+| url | <code>string</code> |  | url to open |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+device_message"></a>
 
-### session.device\_message(nodeid, message, [title]) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.device\_message(nodeid, message, [title], [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Display a message on remote device.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -938,6 +1044,7 @@ Display a message on remote device.
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 
 | Param | Type | Default | Description |
@@ -945,10 +1052,11 @@ Display a message on remote device.
 | nodeid | <code>string</code> |  | Unique node from which to remove the share |
 | message | <code>string</code> |  | message to display |
 | [title] | <code>string</code> | <code>&quot;\&quot;MeshCentral\&quot;&quot;</code> | message title |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+device_toast"></a>
 
-### session.device\_toast(nodeids, message, [title]) ⇒ <code>Promise.&lt;boolean&gt;</code>
+### session.device\_toast(nodeids, message, [title], [timeout]) ⇒ <code>Promise.&lt;boolean&gt;</code>
 Popup a toast a message on remote device.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -957,10 +1065,11 @@ Popup a toast a message on remote device.
 
 - [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
 - [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
 
 **Todo**
 
-- [ ] This function returns true even if it fails, because the server tells us it succeeds before it actually knows, then later tells us it failed, but it's hard to find taht because it looks exactly like a success.
+- [ ] This function returns true even if it fails, because the server tells us it succeeds before it actually knows, then later tells us it failed, but it's hard to find that because it looks exactly like a success.
 
 
 | Param | Type | Default | Description |
@@ -968,6 +1077,7 @@ Popup a toast a message on remote device.
 | nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> |  | Unique node from which to remove the share |
 | message | <code>string</code> |  | message to display |
 | [title] | <code>string</code> | <code>&quot;\&quot;MeshCentral\&quot;&quot;</code> | message title |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+interuser"></a>
 

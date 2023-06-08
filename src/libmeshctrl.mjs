@@ -123,8 +123,10 @@ let _make_bitwise_enum = (properties, {all_prop=null, none_prop=null, start_valu
  * @extends Error
  */
 class ServerError extends Error {
+    static type = Symbol()
     constructor(message) {
         super(message)
+        this.type = ServerError.type
     }
 }
 
@@ -132,8 +134,10 @@ class ServerError extends Error {
  * @extends Error
  */
 class SocketError extends Error {
+    static type = Symbol()
     constructor(message) {
         super(message)
+        this.type = SocketError.type
     }
 }
 
@@ -141,8 +145,21 @@ class SocketError extends Error {
  * @extends Error
  */
 class ValueError extends Error {
+    static type = Symbol()
     constructor(message) {
         super(message)
+        this.type = ValueError.type
+    }
+}
+
+/** Represents that a command timed out
+ * @extends Error
+ */
+class TimeoutError extends Error {
+    static type = Symbol()
+    constructor(message) {
+        super(message)
+        this.type = TimeoutError.type
     }
 }
 
@@ -446,7 +463,7 @@ class Session {
         return this._user_info
     }
 
-    async _send_command(data, name) {
+    async _send_command(data, name, timeout=null) {
         if (!this.alive) {
             throw new SocketError("Socket Closed")
         }
@@ -465,12 +482,19 @@ class Session {
             })
         })
         this._sock.send(JSON.stringify(Object.assign({}, data, { tag: id, responseid: id })))
-        return p
+        if (timeout === null) {
+            return p
+        } else {
+            return Promise.race([
+                p,
+                new Promise((_r, rej) => setTimeout(rej, timeout, new TimeoutError(`Command ${id} timed out`)))
+            ])
+        }
     }
 
     // Some commands don't use response id in return, for some reason
     // Hopefully this bug gets fixed. If so, remove this function and fix everything using it
-    async _send_command_no_response_id(data) {
+    async _send_command_no_response_id(data, timeout=null) {
         if (!this.alive) {
             throw new SocketError("Socket Closed")
         }
@@ -484,7 +508,14 @@ class Session {
             })
         })
         this._sock.send(JSON.stringify(data))
-        return p
+        if (timeout === null) {
+            return p
+        } else {
+            return Promise.race([
+                p,
+                new Promise((_r, rej) => setTimeout(rej, timeout, new TimeoutError(`Command ${data.action} timed out`)))
+            ])
+        }
     }
 
     /** 
@@ -495,16 +526,18 @@ class Session {
      * @param {string} [options.name=null] - User's name. For display purposes.
      * @param {string} [options.message=null] - Message to send to user in invite email
      * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async send_invite_email(group, email, {name=null, message=null, meshid=null}={}){
+    async send_invite_email(group, email, {name=null, message=null, meshid=null}={}, timeout=null){
         var op = { action: 'inviteAgent', email: email, name: '', os: '0' }
         if (meshid) { op.meshid = meshid } else if (group) { op.meshname = group }
         if (name) { op.name = name }
         if (message) { op.msg = message }
-        return this._send_command(op, "send_invite_email").then((data)=>{
+        return this._send_command(op, "send_invite_email", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -519,15 +552,17 @@ class Session {
      * @param {Object} [options={}]
      * @param {MESHRIGHTS} [options.flags=null] - Bitwise flags for MESHRIGHTS
      * @param {string} [options.meshid=null] - ID of mesh which to invite user. Overrides "group"
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object>} Invite link information
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async generate_invite_link(group, hours, {flags=null, meshid=null}={}) {
+    async generate_invite_link(group, hours, {flags=null, meshid=null}={}, timeout=null) {
         var op = { action: 'createInviteLink', expire: hours, flags: 0 }
         if (meshid) { op.meshid = meshid; } else if (group) { op.meshname = group; }
         if (flags !== null) { op.flags = flags; }
-        return this._send_command(op, "generate_invite_link").then((data)=>{
+        return this._send_command(op, "generate_invite_link", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -540,12 +575,14 @@ class Session {
 
     /**
      * List users on server. Admin Only.
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object[]>} List of users
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_users() {
-        return this._send_command({action: "users"}, "list_users").then((data)=>{
+    async list_users(timeout=null) {
+        return this._send_command({action: "users"}, "list_users", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -555,33 +592,39 @@ class Session {
 
     /**
      * Get list of connected users. Admin Only.
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object[]>} List of user sessions
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_user_sessions() {
-        return this._send_command({action: "wssessioncount"}, "list_user_sessions").then((data)=>{
+    async list_user_sessions(timeout=null) {
+        return this._send_command({action: "wssessioncount"}, "list_user_sessions", timeout).then((data)=>{
             return data.wssessions
         })
     }
 
     /**
      * Get user groups. Admin will get all user groups, otherwise get limited user groups
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object[]|null>} List of groups, or null if no groups are found
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_user_groups() {
-        return this._send_command({action: "usergroups"}, "list_user_groups").then((data)=>{
+    async list_user_groups(timeout=null) {
+        return this._send_command({action: "usergroups"}, "list_user_groups", timeout).then((data)=>{
             return data.ugroups
         })
     }
 
     /**
      * Get device groups. Only returns meshes to which the logged in user has access
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object[]>} List of meshes
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_device_groups() {
-        return this._send_command({action: "meshes"}, "list_device_groups").then((data)=>{
+    async list_device_groups(timeout=null) {
+        return this._send_command({action: "meshes"}, "list_device_groups", timeout).then((data)=>{
             return data.meshes
         })
     }
@@ -592,20 +635,22 @@ class Session {
      * @param {boolean} [options.details=false] - Get device details
      * @param {string} [options.group=null] - Get devices from specific group by name. Overrides meshid
      * @param {string} [options.meshid=null] - Get devices from specific group by id
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object[]>} List of nodes
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_devices({details=false, group=null, meshid=null}={}) {
+    async list_devices({details=false, group=null, meshid=null}={}, timeout=null) {
         let command_list = []
         if (details) {
-            command_list.push(this._send_command({action: "getDeviceDetails", type:"json"}, "list_devices"))
+            command_list.push(this._send_command({action: "getDeviceDetails", type:"json"}, "list_devices", timeout))
         } else if (group) {
-            command_list.push(this._send_command({ action: 'nodes', meshname: group}, "list_devices"))
+            command_list.push(this._send_command({ action: 'nodes', meshname: group}, "list_devices", timeout))
         } else if (meshid) {
-            command_list.push(this._send_command({ action: 'nodes', meshid: meshid}, "list_devices"))
+            command_list.push(this._send_command({ action: 'nodes', meshid: meshid}, "list_devices", timeout))
         } else {
-            command_list.push(this._send_command({ action: 'meshes' }, "list_devices"))
-            command_list.push(this._send_command({ action: 'nodes' }, "list_devices"))
+            command_list.push(this._send_command({ action: 'meshes' }, "list_devices"), timeout)
+            command_list.push(this._send_command({ action: 'nodes' }, "list_devices"), timeout)
             
         }
         return await Promise.all(command_list).then((args)=>{
@@ -687,10 +732,12 @@ class Session {
      * @param {string} [options.userid=null] - Filter by user. Overrides nodeid.
      * @param {string} [options.nodeid=null] - Filter by node
      * @param {number} [options.limit=null] - Limit to the N most recent events
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object[]>} List of events
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_events({userid=null, nodeid=null, limit=null}={}) {
+    async list_events({userid=null, nodeid=null, limit=null}={}, timeout=null) {
         if ((typeof limit != 'number') || (limit < 1)) { limit = null; }
 
         let cmd = null;
@@ -702,18 +749,20 @@ class Session {
             cmd = { action: 'events' }
         }
         if (typeof limit == 'number') { cmd.limit = limit; }
-        return this._send_command(cmd, "list_events").then((d)=>{
+        return this._send_command(cmd, "list_events", timeout).then((d)=>{
             return d.events
         })
     }
 
     /** 
      * List login tokens for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object[]>} List of tokens
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_login_tokens() {
-        return this._send_command_no_response_id({ action: 'loginTokens' }).then((data)=>{
+    async list_login_tokens(timeout=null) {
+        return this._send_command_no_response_id({ action: 'loginTokens' }, timeout).then((data)=>{
             return data.loginTokens
         })
     }
@@ -722,13 +771,15 @@ class Session {
      * Create login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} name - Name of token
      * @param {number} [expire=null] - Minutes until expiration. 0 or null for no expiration.
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object>} Created token
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_login_token(name, expire=null) {
+    async add_login_token(name, expire=null, timeout=null) {
         let cmd = { action: 'createLoginToken', name: name, expire: 0 }
         if (expire) { cmd.expire = expire }
-        return this._send_command_no_response_id(cmd).then((data)=>{
+        return this._send_command_no_response_id(cmd, timeout).then((data)=>{
             let d = Object.assign({}, data)
             delete d.action
             return d
@@ -739,10 +790,12 @@ class Session {
     /** 
      * Remove login token for current user. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} name - Name of token or token username
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object[]>} List of remaining tokens
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_login_token(names) {
+    async remove_login_token(names, timeout=null) {
         if (typeof names === "string") {
             names = [names]
         }
@@ -759,7 +812,7 @@ class Session {
             }
             realnames.push(name)
         }
-        return this._send_command_no_response_id({ action: 'loginTokens', remove: realnames }).then((data)=>{
+        return this._send_command_no_response_id({ action: 'loginTokens', remove: realnames }, timeout).then((data)=>{
             return data.loginTokens
         })
     }
@@ -777,11 +830,13 @@ class Session {
      * @param {string} [options.realname=null] - User's real name
      * @param {string} [options.phone=null] - User's phone number
      * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_user(name, password, {randompass=false, domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}={}) {
+    async add_user(name, password, {randompass=false, domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}={}, timeout=null) {
         // Rights uses USERRIGHTS
         if (randompass) { password = this._getRandomAmtPassword() }
         let op = { action: 'adduser', username: name, pass: password };
@@ -793,7 +848,7 @@ class Session {
         if (phone === true) { op.phone = ''; }
         if (typeof phone == 'string') { op.phone = phone }
         if (typeof realname == 'string') { op.realname = realname }
-        return this._send_command(op, "add_user").then((data)=>{
+        return this._send_command(op, "add_user", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -812,11 +867,13 @@ class Session {
      * @param {string} [options.realname=null] - User's real name
      * @param {string} [options.phone=null] - User's phone number
      * @param {USERRIGHTS} [options.rights=null] - Bitwise mask of user's rights on the server
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async edit_user(userid, {domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}) {
+    async edit_user(userid, {domain=null, email=null, emailverified=false, resetpass=false, realname=null, phone=null, rights=null}={}, timeout=null) {
         // Rights uses USERRIGHTS
         if ((domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + domain + '/' + userid; }
         else if ((this._domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + this._domain + '/' + userid; }
@@ -830,7 +887,7 @@ class Session {
         if (typeof phone == 'string') { op.phone = phone; }
         if (typeof realname == 'string') { op.realname = realname; }
         if (realname === true) { op.realname = ''; }
-        return this._send_command(op, "edit_user").then((data)=>{
+        return this._send_command(op, "edit_user", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -841,13 +898,15 @@ class Session {
     /** 
      * Remove an existing user
      * @param {string} userid - Unique userid
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_user(userid) {
+    async remove_user(userid, timeout=null) {
         if ((this._domain != null) && (userid.indexOf('/') < 0)) { userid = 'user/' + this._domain + '/' + userid; }
-        return this._send_command({ action: 'deleteuser', userid: userid }, "remove_user").then((data)=>{
+        return this._send_command({ action: 'deleteuser', userid: userid }, "remove_user", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -859,14 +918,16 @@ class Session {
      * Create a new user group
      * @param {string} name - Name of usergroup
      * @param {string} [description=null] - Description of user group
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object>} New user group
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_user_group(name, description=null) {
+    async add_user_group(name, description=null, timeout=null) {
         let op = { action: 'createusergroup', name: name, desc: description };
         if (this._domain) { op.domain = this._domain }
-        return this._send_command(op, "add_user_group").then((data)=>{
+        return this._send_command(op, "add_user_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -880,16 +941,18 @@ class Session {
     /** 
      * Remove an existing user group
      * @param {string} userid - Unique userid
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_user_group(groupid) {
+    async remove_user_group(groupid, timeout=null) {
         if ((this._domain != null) && (userid.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
         if (!groupid.startsWith("ugrp/")) {
             groupid = `ugrp//${groupid}`
         }
-        return this._send_command({ action: 'deleteusergroup', ugrpid: groupid }, "remove_user_group").then((data)=>{
+        return this._send_command({ action: 'deleteusergroup', ugrpid: groupid }, "remove_user_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -901,11 +964,13 @@ class Session {
      * Add user(s) to an existing user group. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string|array} ids - Unique user id(s)
      * @param {string} groupid - Group to add the given user to
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<string[]>} List of users that were successfully added
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_users_to_user_group(userids, groupid) {
+    async add_users_to_user_group(userids, groupid, timeout=null) {
         if (typeof userids === "string") {
             userids = [userids]
         }
@@ -918,7 +983,7 @@ class Session {
                 resolve(data.event.msgArgs[0])
                 this.stop_listening_to_events(l)
             }, {"event": {"etype":"ugrp"}})
-            this._send_command({ action: 'addusertousergroup', ugrpid: groupid, usernames: userids}, "add_users_to_user_group").then((data)=>{
+            this._send_command({ action: 'addusertousergroup', ugrpid: groupid, usernames: userids}, "add_users_to_user_group", timeout).then((data)=>{
                 if (data.result && data.result.toLowerCase() !== "ok") {
                     reject(new ServerError(data.result))
                 }
@@ -931,16 +996,18 @@ class Session {
      * Remove user from an existing user group
      * @param {string} id - Unique user id
      * @param {string} groupid - Group to remove the given user from
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_user_from_user_group(userid, groupid) {
+    async remove_user_from_user_group(userid, groupid, timeout=null) {
         if ((this._domain != null) && (id.indexOf('/') < 0)) { groupid = 'ugrp/' + this._domain + '/' + groupid; }
         if (!groupid.startsWith("ugrp/")) {
             groupid = `ugrp//${groupid}`
         }
-        return this._send_command({ action: 'removeuserfromusergroup', ugrpid: groupid, userid: userid }, "remove_from_user_group").then((data)=>{
+        return this._send_command({ action: 'removeuserfromusergroup', ugrpid: groupid, userid: userid }, "remove_from_user_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -953,17 +1020,19 @@ class Session {
      * @param {string|array} userids - Unique user id(s)
      * @param {string} nodeid - Node to add the given user to
      * @param {MESHRIGHTS} [rights=null] - Bitwise mask for the rights on the given mesh
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_users_to_device(userids, nodeid, rights=null) {
+    async add_users_to_device(userids, nodeid, rights=null, timeout=null) {
         if (typeof userids === "string") {
             userids = [userids]
         }
         userids = userids.map((u)=>u.startsWith("user//") ? u : `user//${u}`)
         rights = rights || 0
-        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, userids: userids, rights: rights}, "add_users_to_device").then((data)=>{
+        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, userids: userids, rights: rights}, "add_users_to_device", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -975,14 +1044,16 @@ class Session {
      * Remove users from an existing node
      * @param {string} nodeid - Node to remove the given users from
      * @param {string|array} userids - Unique user id(s)
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_users_from_device(nodeid, userids) {
+    async remove_users_from_device(nodeid, userids, timeout=null) {
         if (typeof(userids) === "string") { userids = [userids] }
         userids = userids.map((u)=>u.startsWith("user//") ? u : `user//${u}`)
-        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, usernames: userids, rights: 0, remove: true }, "remove_users_from_device").then((data)=>{
+        return this._send_command({ action: 'adddeviceuser', nodeid: nodeid, usernames: userids, rights: 0, remove: true }, "remove_users_from_device", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -998,17 +1069,19 @@ class Session {
      * @param {boolean} [options.amtonly=false] - 
      * @param {MESHFEATURES} [options.features=0] - Bitwise features to enable on the group
      * @param {CONSENTFLAGS} [options.consent=0] - Bitwise consent flags to use for the group
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object>} New device group
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_device_group(name, {description="", amtonly=false, features=0, consent=0}={}) {
+    async add_device_group(name, {description="", amtonly=false, features=0, consent=0}={}, timeout=null) {
         var op = { action: 'createmesh', meshname: name, meshtype: 2 };
         if (description) { op.desc = description; }
         if (amtonly) { op.meshtype = 1 }
         if (features) { op.flags = features }
         if (consent) { op.consent = consent }
-        return this._send_command(op, "add_device_group").then((data)=>{
+        return this._send_command(op, "add_device_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1023,17 +1096,19 @@ class Session {
      * Remove an existing device group
      * @param {string} meshid - Unique id of device group
      * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_device_group(meshid, isname=false) {
+    async remove_device_group(meshid, isname=false, timeout=null) {
         var op = { action: 'deletemesh', meshid: meshid};
         if (isname) {
             op.meshname = meshid
             delete op.meshid
         }
-        return this._send_command(op, "remove_device_group").then((data)=>{
+        return this._send_command(op, "remove_device_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1053,11 +1128,13 @@ class Session {
      * @param {string[]} [options.invite_codes=null] - Create new invite codes
      * @param {boolean} [options.backgroundonly=false] - Flag for invite codes
      * @param {boolean} [options.interactiveonly=false] - Flag for invite codes
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async edit_device_group(meshid, {isname=false, name=null, description=null, flags=null, consent=null, invite_codes=null, backgroundonly=false, interactiveonly=false}={}) {
+    async edit_device_group(meshid, {isname=false, name=null, description=null, flags=null, consent=null, invite_codes=null, backgroundonly=false, interactiveonly=false}={}, timeout=null) {
         var op = { action: 'editmesh', meshid: meshid};
         if (isname) {
             op.meshname = meshid
@@ -1078,7 +1155,7 @@ class Session {
         if (consent != null) {
             op.consent = consent
         }
-        return this._send_command(op, "edit_device_group").then((data)=>{
+        return this._send_command(op, "edit_device_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1091,18 +1168,20 @@ class Session {
      * @param {string|array} nodeids - Unique node id(s)
      * @param {string} meshid - Unique mesh id
      * @param {boolean} [isname=false] - treat "meshid" as a name instead of an id
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Boolean>} true on success
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async move_to_device_group(nodeids, meshid, isname=false) {
+    async move_to_device_group(nodeids, meshid, isname=false, timeout=null) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
         var op = { action: 'changeDeviceMesh', nodeids: nodeids, meshid: meshid };
         if (isname) {
             op.meshname = meshid
             delete op.meshid
         }
-        return this._send_command(op, "move_to_device_group").then((data)=>{
+        return this._send_command(op, "move_to_device_group", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1117,10 +1196,12 @@ class Session {
      * @param {Object} [options={}]
      * @param {boolean} [options.isname=false] - Read meshid as a name rather than an id
      * @param {MESHRIGHTS} [options.rights=0] - Bitwise mask for the rights on the given mesh
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<object>} Object showing which were added correctly and which were not, along with their result messages
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_users_to_device_group(userids, meshid, {isname=false, rights=0}={}) {
+    async add_users_to_device_group(userids, meshid, {isname=false, rights=0}={}, timeout=null) {
         if (typeof userids === "string") {
             userids = [userids]
         }
@@ -1131,7 +1212,7 @@ class Session {
             op.meshname = meshid
             delete op.meshid
         }
-        return this._send_command(op, "add_user_to_device_group").then((data)=>{
+        return this._send_command(op, "add_user_to_device_group", timeout).then((data)=>{
             let results = data.result.split(",")
             let out = {}
             for (let [i, result] of results.entries()) {
@@ -1153,10 +1234,12 @@ class Session {
      * @param {string|array} userids - Unique user id(s)
      * @param {string} meshid - Mesh to add the given user to
      * @param {boolean} [isname=false] - Read meshid as a name rather than an id
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<Object>} Object showing which were removed correctly and which were not
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_users_from_device_group(userids, meshid, isname=false) {
+    async remove_users_from_device_group(userids, meshid, isname=false, timeout=null) {
         let requests = []
         let id_obj = {meshid: meshid}
         if (isname) {
@@ -1167,7 +1250,7 @@ class Session {
             userids = [userids]
         }
         for (let userid of userids) {
-            requests.push(this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userid }, id_obj), "remove_users_from_device_group"))
+            requests.push(this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userid }, id_obj, timeout), "remove_users_from_device_group"))
         }
         return Promise.all(requests).then((results)=>{
             let out = {}
@@ -1187,14 +1270,16 @@ class Session {
      * Broadcast a message to all users or a single user
      * @param {string} message - Message to broadcast
      * @param {string} [userid=null] - Optional user to which to send the message
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @return {Promise<boolean>} True if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async broadcast(message, userid=null) {
+    async broadcast(message, userid=null, timeout=null) {
         var op = { action: 'userbroadcast', msg: message };
         if (userid) { op.userid = userid }
-        return this._send_command(op, "broadcast").then((data)=>{
+        return this._send_command(op, "broadcast", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1204,20 +1289,22 @@ class Session {
 
     /** Get all info for a given device. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} nodeid - Unique id of desired node
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise} Object containing all meaningful device info
      * @throws {ValueError} `Invalid device id` if device is not found
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async device_info(nodeid) {
+    async device_info(nodeid, timeout=null) {
         let requests = []
 
-        requests.push(this._send_command({ action: 'nodes' }, "device_info"))
+        requests.push(this._send_command({ action: 'nodes' }, "device_info", timeout))
         // requests.push(this._send_command_no_response_id({ action: "nodes" }))
         // requests.push(this._send_command({ action: 'getnetworkinfo', nodeid: nodeid }, "device_info"))
-        requests.push(this._send_command_no_response_id({ action: 'getnetworkinfo', nodeid: nodeid }))
+        requests.push(this._send_command_no_response_id({ action: 'getnetworkinfo', nodeid: nodeid }, timeout))
         // requests.push(this._send_command({ action: 'lastconnect', nodeid: nodeid }, "device_info"))
-        requests.push(this._send_command_no_response_id({ action: 'lastconnect', nodeid: nodeid }))
-        requests.push(this._send_command({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }, "device_info"))
+        requests.push(this._send_command_no_response_id({ action: 'lastconnect', nodeid: nodeid }, timeout))
+        requests.push(this._send_command({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }, "device_info", timeout))
         // requests.push(this._send_command_no_response_id({ action: 'getsysinfo', nodeid: nodeid, nodeinfo: true }))
         return Promise.all(requests).then(([nodes, network, lastconnect, sysinfo])=>{
             let node = null
@@ -1255,18 +1342,20 @@ class Session {
      * @param {string|string[]} [options.tags=null] - New tags for device
      * @param {ICON} [options.icon=null] - New icon for device
      * @param {CONSENTFLAGS} [options.consent=null] - New consent flags for device
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} True if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async edit_device(nodeid, {name=null, description=null, tags=null, icon=null, consent=null}={}) {
+    async edit_device(nodeid, {name=null, description=null, tags=null, icon=null, consent=null}={}, timeout=null) {
         let op = { action: 'changedevice', nodeid: nodeid };
         if (name !== null) { op.name = name }
         if (description !== null) { op.desc = description }
         if (tags !== null) { op.tags = tags }
         if (icon !== null) { op.icon = icon }
         if (consent !== null) { op.consent = consent }
-        return this._send_command(op, "edit_device").then((data)=>{
+        return this._send_command(op, "edit_device", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1281,11 +1370,13 @@ class Session {
      * @param {boolean} [options.powershell=false] - Use powershell to run command. Only available on Windows.
      * @param {boolean} [options.runasuser=false] - Attempt to run as a user instead of the root permissions given to the agent. Fall back to root if we cannot.
      * @param {boolean} [options.runasuseronly=false] - Error if we cannot run the command as the logged in user.
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object>} Object containing mapped output of the commands by device
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async run_command(nodeids, command, {powershell=false, runasuser=false, runasuseronly=false}={}) {
+    async run_command(nodeids, command, {powershell=false, runasuser=false, runasuseronly=false}={}, timeout=null) {
         let runAsUser = 0;
         if (runasuser) { runAsUser = 1; }
         if (runasuseronly) { runAsUser = 2; }
@@ -1319,7 +1410,7 @@ class Session {
                     result[match_nodeid(data.nodeid, nodeids)].result.push(data.value)
                 }
             }, {action: "msg", type: "console"})
-            this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command").then((data)=>{
+            this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command", timeout).then((data)=>{
                 if (data.result && data.result.toLowerCase() !== "ok") {
                     reject(new ServerError(data.result))
                 }
@@ -1347,53 +1438,63 @@ class Session {
 
     /** Wake up given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to wake
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} True if successful
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async wake_devices(nodeids) {
+    async wake_devices(nodeids, timeout=null) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'wakedevices', nodeids: nodeids }, "wake_devices").then((data)=>{
+        return this._send_command({ action: 'wakedevices', nodeids: nodeids }, "wake_devices", timeout).then((data)=>{
 
         })
     }
 
     /** Reset given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to reset
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} True if successful
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async reset_devices(nodeids) {
+    async reset_devices(nodeids, timeout=null) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 3 }, "reset_devices")
+        return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 3 }, "reset_devices", timeout)
     }
 
     /** Sleep given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to sleep
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} True if successful
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async sleep_devices(nodeids) {
+    async sleep_devices(nodeids, timeout=null) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 4 }, "sleep_devices")
+        return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 4 }, "sleep_devices", timeout)
     }
 
     /** Power off given devices
      * @param {string|string[]} nodeids - Unique ids of nodes which to power off
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} True if successful
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async power_off_devices(nodeids) {
+    async power_off_devices(nodeids, timeout=null) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 2 }, "power_off_devices")
+        return this._send_command({ action: 'poweraction', nodeids: nodeids, actiontype: 2 }, "power_off_devices", timeout)
     }
 
     /** List device shares of given node. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} nodeid - Unique id of nodes of which to list shares
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object[]>} Array of objects representing device shares
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async list_device_shares(nodeid) {
-        return this._send_command_no_response_id({ action: 'deviceShares', nodeid: nodeid }).then((data)=>{
+    async list_device_shares(nodeid, timeout=null) {
+        return this._send_command_no_response_id({ action: 'deviceShares', nodeid: nodeid }, timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1410,11 +1511,13 @@ class Session {
      * @param {number|Date} [options.start=new Date()] - When to start the share
      * @param {number|Date} [options.end=null] - When to end the share. If null, use duration instead
      * @param {number} [options.duration=60*60] - Duration in seconds for share to exist
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<Object>} Info about the newly created share
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async add_device_share(nodeid, name, {type=SHARINGTYPE.desktop, consent=null, start=null, end=null, duration=60*60}={}) {
+    async add_device_share(nodeid, name, {type=SHARINGTYPE.desktop, consent=null, start=null, end=null, duration=60*60}={}, timeout=null) {
         if (start === null) {
             start = new Date()
         }
@@ -1434,7 +1537,7 @@ class Session {
         if (end <= start) {
             throw Error("End time must be ahead of start time")
         }
-        return this._send_command({ action: 'createDeviceShareLink', nodeid: nodeid, guestname: name, p: SHARINGTYPENUM[type], consent: consent, start: start, end: end }, "add_device_share").then((data)=>{
+        return this._send_command({ action: 'createDeviceShareLink', nodeid: nodeid, guestname: name, p: SHARINGTYPENUM[type], consent: consent, start: start, end: end }, "add_device_share", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1449,12 +1552,14 @@ class Session {
     /** Remove a device share
      * @param {string} nodeid - Unique node from which to remove the share
      * @param {string} shareid - Unique share id to be removed
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async remove_device_share(nodeid, shareid) {
-        return this._send_command({ action: 'removeDeviceShare', nodeid: nodeid, publicid: shareid }, "remove_device_share").then((data)=>{
+    async remove_device_share(nodeid, shareid, timeout=null) {
+        return this._send_command({ action: 'removeDeviceShare', nodeid: nodeid, publicid: shareid }, "remove_device_share", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1465,12 +1570,14 @@ class Session {
     /** Open url in browser on device. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
      * @param {string} nodeid - Unique node from which to remove the share
      * @param {string} url - url to open
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {Error} `Failed to open url` if failure occurs
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async device_open_url(nodeid, url) {
+    async device_open_url(nodeid, url, timeout=null) {
         return new Promise((resolve, reject)=>{
             let l = this.listen_to_events((data)=>{
                 this.stop_listening_to_events(l)
@@ -1480,7 +1587,7 @@ class Session {
                     reject(new Error("Failed to open url"))
                 }
             }, {type: "openUrl", url: url})
-            this._send_command({ action: 'msg', type: 'openUrl', nodeid: nodeid, url: url }, "device_open_url").then((data)=>{
+            this._send_command({ action: 'msg', type: 'openUrl', nodeid: nodeid, url: url }, "device_open_url", timeout).then((data)=>{
                 if (data.result && data.result.toLowerCase() !== "ok") {
                     reject(new ServerError(data.result))
                 }
@@ -1492,12 +1599,14 @@ class Session {
      * @param {string} nodeid - Unique node from which to remove the share
      * @param {string} message - message to display
      * @param {string} [title="MeshCentral"] - message title
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
      */
-    async device_message(nodeid, message, title="MeshCentral") {
-        return this._send_command({ action: 'msg', type: 'messagebox', nodeid: nodeid, title: title, msg: message }, "device_message").then((data)=>{
+    async device_message(nodeid, message, title="MeshCentral", timeout=null) {
+        return this._send_command({ action: 'msg', type: 'messagebox', nodeid: nodeid, title: title, msg: message }, "device_message", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -1509,14 +1618,16 @@ class Session {
      * @param {string|string[]} nodeids - Unique node from which to remove the share
      * @param {string} message - message to display
      * @param {string} [title="MeshCentral"] - message title
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
      * @returns {Promise<boolean>} true if successful
      * @throws {ServerError} Error text from server if there is a failure
      * @throws {SocketError} Info about socket closure
-     * @todo This function returns true even if it fails, because the server tells us it succeeds before it actually knows, then later tells us it failed, but it's hard to find taht because it looks exactly like a success.
+     * @throws {TimeoutError} Command timed out
+     * @todo This function returns true even if it fails, because the server tells us it succeeds before it actually knows, then later tells us it failed, but it's hard to find that because it looks exactly like a success.
      */
-    async device_toast(nodeids, message, title="MeshCentral") {
+    async device_toast(nodeids, message, title="MeshCentral", timeout=null) {
         if (typeof(nodeids) === "string") { nodeids = [nodeids] }
-        return this._send_command({ action: 'toast', nodeids: nodeids, title: "MeshCentral", msg: message }, "device_toast").then((data)=>{
+        return this._send_command({ action: 'toast', nodeids: nodeids, title: "MeshCentral", msg: message }, "device_toast", timeout).then((data)=>{
             if (data.result && data.result.toLowerCase() !== "ok") {
                 throw new ServerError(data.result)
             }
@@ -2192,7 +2303,7 @@ class _Shell extends _Tunnel {
     }
 }
 
-let _Internal = {
+const _Internal = {
     _SizeChunker,
     _Shell,
     _SmartShell,
@@ -2203,4 +2314,11 @@ let _Internal = {
     _make_bitwise_enum
 }
 
-export {Session, MESHRIGHTS, USERRIGHTS, CONSENTFLAGS, MESHFEATURES, SHARINGTYPE, SHARINGTYPENUM, PROTOCOL, ICON, _Internal}
+const ERRORS = {
+    ServerError,
+    SocketError,
+    ValueError,
+    TimeoutError
+}
+
+export {Session, MESHRIGHTS, USERRIGHTS, CONSENTFLAGS, MESHFEATURES, SHARINGTYPE, SHARINGTYPENUM, PROTOCOL, ICON, ERRORS, _Internal}
