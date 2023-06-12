@@ -124,8 +124,8 @@ Class for MeshCentral Session
         * [.device_info(nodeid, [timeout])](#Session+device_info) ⇒ <code>Promise</code>
         * [.edit_device(nodeid, [options], [timeout])](#Session+edit_device) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.run_command(nodeids, command, [options], [timeout])](#Session+run_command) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.shell(nodeid)](#Session+shell) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
-        * [.smart_shell(nodeid, regex)](#Session+smart_shell) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
+        * [.shell(nodeid, [unique])](#Session+shell) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
+        * [.smart_shell(nodeid, regex, [unique])](#Session+smart_shell) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
         * [.wake_devices(nodeids, [timeout])](#Session+wake_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.reset_devices(nodeids, [timeout])](#Session+reset_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.sleep_devices(nodeids, [timeout])](#Session+sleep_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
@@ -137,11 +137,11 @@ Class for MeshCentral Session
         * [.device_message(nodeid, message, [title], [timeout])](#Session+device_message) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.device_toast(nodeids, message, [title], [timeout])](#Session+device_toast) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.interuser(data, [options])](#Session+interuser)
-        * [.upload(nodeid, source, target)](#Session+upload) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.upload_file(nodeid, filepath, target)](#Session+upload_file) ⇒ <code>Promise.&lt;Object&gt;</code>
-        * [.download(nodeid, source, [target])](#Session+download) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
-        * [.download_file(nodeid, source, filepath)](#Session+download_file) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
-        * [.file_explorer(nodeid)](#Session+file_explorer) ⇒ [<code>Promise.&lt;\_Files&gt;</code>](#_Files)
+        * [.upload(nodeid, source, target, [unique_file_tunnel])](#Session+upload) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.upload_file(nodeid, filepath, target, [unique_file_tunnel])](#Session+upload_file) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.download(nodeid, source, [target], [unique_file_tunnel])](#Session+download) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
+        * [.download_file(nodeid, source, filepath, [unique_file_tunnel])](#Session+download_file) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
+        * [.file_explorer(nodeid, [unique])](#Session+file_explorer) ⇒ [<code>Promise.&lt;\_Files&gt;</code>](#_Files)
     * _static_
         * [.create(url, [options])](#Session.create) ⇒ [<code>Session</code>](#Session)
     * _inner_
@@ -853,28 +853,30 @@ Run a command on any number of nodes. WARNING: Non namespaced call. Calling this
 
 <a name="Session+shell"></a>
 
-### session.shell(nodeid) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
-Open a terminal shell on the given device
+### session.shell(nodeid, [unique]) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
+Get a terminal shell on the given device
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell) - Newly created and initialized _Shell  
+**Returns**: [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell) - Newly created and initialized [_Shell](#_Shell) or cached [_Shell](#_Shell) if unique is false and a shell is currently active  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id of node on which to open the shell |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id of node on which to open the shell |
+| [unique] | <code>boolean</code> | <code>false</code> | true: Create a unique [_Shell](#_Shell). Caller is responsible for cleanup. false: Use a cached [_Shell](#_Shell) if available, otherwise create and cache. |
 
 <a name="Session+smart_shell"></a>
 
-### session.smart\_shell(nodeid, regex) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
-Open a smart terminal shell on the given device
+### session.smart\_shell(nodeid, regex, [unique]) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
+Get a smart terminal shell on the given device
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell) - Newly created and initialized _SmartShell  
+**Returns**: [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell) - Newly created and initialized [_SmartShell](#_SmartShell) or cached [_SmartShell](#_SmartShell) if unique is false and a smartshell with regex is currently active  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id of node on which to open the shell |
-| regex | <code>regex</code> | Regex to watch for to signify that the shell is ready for new input. |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id of node on which to open the shell |
+| regex | <code>regex</code> |  | Regex to watch for to signify that the shell is ready for new input. |
+| [unique] | <code>boolean</code> | <code>false</code> | true: Create a unique [_SmartShell](#_SmartShell). Caller is responsible for cleanup. false: Use a cached [_SmartShell](#_SmartShell) if available, otherwise create and cache. |
 
 <a name="Session+wake_devices"></a>
 
@@ -1100,35 +1102,37 @@ Fire off an interuser message. This is a fire and forget api, we have no way of 
 
 <a name="Session+upload"></a>
 
-### session.upload(nodeid, source, target) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.upload(nodeid, source, target, [unique_file_tunnel]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Upload a stream to a device. This creates an _File and destroys it every call. If you need to upload multiple files, use [file_explorer](#Session+file_explorer) instead.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Object&gt;</code> - - {result: bool whether upload succeeded, size: number of bytes uploaded}  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id to upload stream to |
-| source | <code>ReadableStream</code> | ReadableStream from which to read data |
-| target | <code>string</code> | Path which to upload stream to on remote device |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id to upload stream to |
+| source | <code>ReadableStream</code> |  | ReadableStream from which to read data |
+| target | <code>string</code> |  | Path which to upload stream to on remote device |
+| [unique_file_tunnel] | <code>boolean</code> | <code>false</code> | true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files) |
 
 <a name="Session+upload_file"></a>
 
-### session.upload\_file(nodeid, filepath, target) ⇒ <code>Promise.&lt;Object&gt;</code>
+### session.upload\_file(nodeid, filepath, target, [unique_file_tunnel]) ⇒ <code>Promise.&lt;Object&gt;</code>
 Friendly wrapper around [upload](#Session+upload) to upload from a filepath. Creates a ReadableStream and calls upload.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Object&gt;</code> - - {result: bool whether upload succeeded, size: number of bytes uploaded}  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id to upload file to |
-| filepath | <code>string</code> | Path from which to read the data |
-| target | <code>string</code> | Path which to upload file to on remote device |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id to upload file to |
+| filepath | <code>string</code> |  | Path from which to read the data |
+| target | <code>string</code> |  | Path which to upload file to on remote device |
+| [unique_file_tunnel] | <code>boolean</code> | <code>false</code> | true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files) |
 
 <a name="Session+download"></a>
 
-### session.download(nodeid, source, [target]) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
+### session.download(nodeid, source, [target], [unique_file_tunnel]) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
 Download a file from a device into a writable stream. This creates an _File and destroys it every call. If you need to upload multiple files, use [file_explorer](#Session+file_explorer) instead.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
@@ -1143,32 +1147,35 @@ Download a file from a device into a writable stream. This creates an _File and 
 | nodeid | <code>string</code> |  | Unique id to download file from |
 | source | <code>string</code> |  | Path from which to download from device |
 | [target] | <code>WritableStream</code> | <code></code> | Stream to which to write data. If null, create new PassThrough stream which is both readable and writable. |
+| [unique_file_tunnel] | <code>boolean</code> | <code>false</code> | true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files) |
 
 <a name="Session+download_file"></a>
 
-### session.download\_file(nodeid, source, filepath) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
+### session.download\_file(nodeid, source, filepath, [unique_file_tunnel]) ⇒ <code>Promise.&lt;WritableStream&gt;</code>
 Friendly wrapper around [download](#Session+download) to download to a filepath. Creates a WritableStream and calls download.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;WritableStream&gt;</code> - The stream which has been downloaded into  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id to download file from |
-| source | <code>string</code> | Path from which to download from device |
-| filepath | <code>string</code> | Path to which to download data |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id to download file from |
+| source | <code>string</code> |  | Path from which to download from device |
+| filepath | <code>string</code> |  | Path to which to download data |
+| [unique_file_tunnel] | <code>boolean</code> | <code>false</code> | true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files) |
 
 <a name="Session+file_explorer"></a>
 
-### session.file\_explorer(nodeid) ⇒ [<code>Promise.&lt;\_Files&gt;</code>](#_Files)
+### session.file\_explorer(nodeid, [unique]) ⇒ [<code>Promise.&lt;\_Files&gt;</code>](#_Files)
 Create, initialize, and return an _File object for the given node
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: [<code>Promise.&lt;\_Files&gt;</code>](#_Files) - A newly initialized file explorer.  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| nodeid | <code>string</code> | Unique id on which to open file explorer |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeid | <code>string</code> |  | Unique id on which to open file explorer |
+| [unique] | <code>boolean</code> | <code>false</code> | true: Create a unique [_Files](#_Files). Caller is responsible for cleanup. false: Use a cached [_Files](#_Files) if available, otherwise create and cache. |
 
 <a name="Session.create"></a>
 
