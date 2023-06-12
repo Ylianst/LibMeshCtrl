@@ -854,10 +854,11 @@ Run a command on any number of nodes. WARNING: Non namespaced call. Calling this
 <a name="Session+shell"></a>
 
 ### session.shell(nodeid) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
-Open a terminal shell on the given device
+Get a terminal shell on the given device
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell) - Newly created and initialized _Shell  
+**Returns**: [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell) - Newly created and initialized [_Shell](#_Shell) or cached [_Shell](#_Shell) if unique is false and a shell is currently active  
+**Props**: <code>boolean</code> [unique=false] - true: Create a unique [_Shell](#_Shell). Caller is responsible for cleanup. false: Use a cached [_Shell](#_Shell) if available, otherwise create and cache.  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -866,10 +867,11 @@ Open a terminal shell on the given device
 <a name="Session+smart_shell"></a>
 
 ### session.smart\_shell(nodeid, regex) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
-Open a smart terminal shell on the given device
+Get a smart terminal shell on the given device
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
-**Returns**: [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell) - Newly created and initialized _SmartShell  
+**Returns**: [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell) - Newly created and initialized [_SmartShell](#_SmartShell) or cached [_SmartShell](#_SmartShell) if unique is false and a smartshell with regex is currently active  
+**Props**: <code>boolean</code> [unique=false] - true: Create a unique [_SmartShell](#_SmartShell). Caller is responsible for cleanup. false: Use a cached [_SmartShell](#_SmartShell) if available, otherwise create and cache.  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1105,6 +1107,7 @@ Upload a stream to a device. This creates an _File and destroys it every call. I
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Object&gt;</code> - - {result: bool whether upload succeeded, size: number of bytes uploaded}  
+**Props**: <code>boolean</code> [unique_file_tunnel=false] - true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1119,6 +1122,7 @@ Friendly wrapper around [upload](#Session+upload) to upload from a filepath. Cre
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;Object&gt;</code> - - {result: bool whether upload succeeded, size: number of bytes uploaded}  
+**Props**: <code>boolean</code> [unique_file_tunnel=false] - true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1137,6 +1141,7 @@ Download a file from a device into a writable stream. This creates an _File and 
 
 - <code>Error</code> String showing the intermediate outcome and how many bytes were downloaded
 
+**Props**: <code>boolean</code> [unique_file_tunnel=false] - true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files)  
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -1151,6 +1156,7 @@ Friendly wrapper around [download](#Session+download) to download to a filepath.
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: <code>Promise.&lt;WritableStream&gt;</code> - The stream which has been downloaded into  
+**Props**: <code>boolean</code> [unique_file_tunnel=false] - true: Create a unique [_Files](#_Files) for this call, which will be cleaned up on return, else use cached or cache [_Files](#_Files)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1165,6 +1171,7 @@ Create, initialize, and return an _File object for the given node
 
 **Kind**: instance method of [<code>Session</code>](#Session)  
 **Returns**: [<code>Promise.&lt;\_Files&gt;</code>](#_Files) - A newly initialized file explorer.  
+**Props**: <code>boolean</code> [unique=false] - true: Create a unique [_Files](#_Files). Caller is responsible for cleanup. false: Use a cached [_Files](#_Files) if available, otherwise create and cache.  
 
 | Param | Type | Description |
 | --- | --- | --- |

@@ -330,6 +330,9 @@ class Session {
         this._sock = null
         this._socket_open = new _Deferred()
         this._inflight = new Set()
+        this._file_tunnels = {}
+        this._shell_tunnels = {}
+        this._smart_shell_tunnels = {}
 
         this._eventer = new EventEmitter()
 
@@ -389,6 +392,11 @@ class Session {
                 this._eventer.emit(id, new SocketError("Socket Closed"))
             }
             this._eventer.emit("close", new SocketError("Socket Closed"))
+            for (let tunnels of [this._file_tunnels, this._shell_tunnels, this._smart_shell_tunnels]) {
+                for (let [, tunnel] of Object.entries(tunnels)) {
+                    tunnel.close()
+                }
+            }
         })
         this._sock.on('error', (err) => {
             this._socket_open.reject(err.code)
@@ -1418,22 +1426,39 @@ class Session {
         })
     }
 
-    /** Open a terminal shell on the given device
+    /** Get a terminal shell on the given device
      * @param {string} nodeid - Unique id of node on which to open the shell
-     * @returns {Promise<_Shell>} Newly created and initialized _Shell
+     * @props {boolean} [unique=false] - true: Create a unique {@link _Shell}. Caller is responsible for cleanup. false: Use a cached {@link _Shell} if available, otherwise create and cache.
+     * @returns {Promise<_Shell>} Newly created and initialized {@link _Shell} or cached {@link _Shell} if unique is false and a shell is currently active
      */
-    async shell(nodeid) {
-        return await _Shell.create(this, nodeid)
+    async shell(nodeid, unique=false) {
+        if (unique) {
+            return await _Shell.create(this, nodeid)
+        }
+        if (!this._shell_tunnels[nodeid] || !this._shell_tunnels[nodeid].alive) {
+            this._shell_tunnels[nodeid] = await _Shell.create(this, nodeid)
+        }
+        return this._shell_tunnels[nodeid]
     }
 
-    /** Open a smart terminal shell on the given device
+    /** Get a smart terminal shell on the given device
      * @param {string} nodeid - Unique id of node on which to open the shell
      * @param {regex} regex - Regex to watch for to signify that the shell is ready for new input.
-     * @returns {Promise<_SmartShell>} Newly created and initialized _SmartShell
+     * @props {boolean} [unique=false] - true: Create a unique {@link _SmartShell}. Caller is responsible for cleanup. false: Use a cached {@link _SmartShell} if available, otherwise create and cache.
+     * @returns {Promise<_SmartShell>} Newly created and initialized {@link _SmartShell} or cached {@link _SmartShell} if unique is false and a smartshell with regex is currently active
      */
-    async smart_shell(nodeid, regex) {
-        let shell = await this.shell()
-        return await _SmartShell.create(shell, regex)
+    async smart_shell(nodeid, regex, unique=false) {
+        let _shell,
+            _id = `${nodeid}${regex}`
+        if (unique) {
+            _shell = await _Shell.create(this, nodeid)
+            return new _SmartShell(_shell, regex)
+        }
+        if (!this._smart_shell_tunnels[_id] || !this._smart_shell_tunnels[_id].alive) {
+            _shell = await _Shell.create(this, nodeid)
+            this._smart_shell_tunnels[_id] = new _SmartShell(_shell, regex)
+        }
+        return this._smart_shell_tunnels[_id]
     }
 
     /** Wake up given devices
@@ -1657,42 +1682,53 @@ class Session {
      * @param {string} nodeid - Unique id to upload stream to
      * @param {ReadableStream} source - ReadableStream from which to read data
      * @param {string} target - Path which to upload stream to on remote device
+     * @props {boolean} [unique_file_tunnel=false] - true: Create a unique {@link _Files} for this call, which will be cleaned up on return, else use cached or cache {@link _Files}
      * @returns {Promise<Object>} - {result: bool whether upload succeeded, size: number of bytes uploaded}
      */
-    async upload(nodeid, source, target) {
-        let files = await this.file_explorer(nodeid)
-        return files.upload(source, target)
+    async upload(nodeid, source, target, unique_file_tunnel=false) {
+        let files = await this.file_explorer(nodeid, unique_file_tunnel)
+        return files.upload(source, target).finally(()=>{
+            if (unique_file_tunnel) {
+                files.close()
+            }
+        })
     }
 
     /** Friendly wrapper around {@link Session#upload} to upload from a filepath. Creates a ReadableStream and calls upload.
      * @param {string} nodeid - Unique id to upload file to
      * @param {string} filepath - Path from which to read the data
      * @param {string} target - Path which to upload file to on remote device
+     * @props {boolean} [unique_file_tunnel=false] - true: Create a unique {@link _Files} for this call, which will be cleaned up on return, else use cached or cache {@link _Files}
      * @returns {Promise<Object>} - {result: bool whether upload succeeded, size: number of bytes uploaded}
      */
-    async upload_file(nodeid, filepath, target) {
+    async upload_file(nodeid, filepath, target, unique_file_tunnel=false) {
         f = fs.createReadStream(filepath)
-        return this.upload(nodeid, f, target)
+        return this.upload(nodeid, f, target, unique_file_tunnel)
     }
 
     /** Download a file from a device into a writable stream. This creates an _File and destroys it every call. If you need to upload multiple files, use {@link Session#file_explorer} instead.
      * @param {string} nodeid - Unique id to download file from
      * @param {string} source - Path from which to download from device
      * @param {WritableStream} [target=null] - Stream to which to write data. If null, create new PassThrough stream which is both readable and writable.
+     * @props {boolean} [unique_file_tunnel=false] - true: Create a unique {@link _Files} for this call, which will be cleaned up on return, else use cached or cache {@link _Files}
      * @returns {Promise<WritableStream>} The stream which has been downloaded into
      * @throws {Error} String showing the intermediate outcome and how many bytes were downloaded
      */
-    async download(nodeid, source, target=null) {
+    async download(nodeid, source, target=null, unique_file_tunnel=false) {
         let passthrough = false
         if (target===null) {
             target = new stream.PassThrough()
             passthrough = true
         }
-        let files = await this.file_explorer(nodeid)
+        let files = await this.file_explorer(nodeid, unique_file_tunnel)
         return files.download(source, target).then(()=>{
             return target
         }, (err)=>{
             throw Error(`${err.result}: ${err.size} bytes downloaded`)
+        }).finally(()=>{
+            if (unique_file_tunnel) {
+                files.close()
+            }
         })
     }
 
@@ -1700,19 +1736,27 @@ class Session {
      * @param {string} nodeid - Unique id to download file from
      * @param {string} source - Path from which to download from device
      * @param {string} filepath - Path to which to download data
+     * @props {boolean} [unique_file_tunnel=false] - true: Create a unique {@link _Files} for this call, which will be cleaned up on return, else use cached or cache {@link _Files}
      * @returns {Promise<WritableStream>} The stream which has been downloaded into
      */
-    async download_file(nodeid, source, filepath) {
+    async download_file(nodeid, source, filepath, unique_file_tunnel=false) {
         let f = fs.createWriteStream(filepath)
-        return this.download(nodeid, source, {target: f})
+        return this.download(nodeid, source, f, unique_file_tunnel)
     }
 
     /** Create, initialize, and return an _File object for the given node
      * @param {string} nodeid - Unique id on which to open file explorer
+     * @props {boolean} [unique=false] - true: Create a unique {@link _Files}. Caller is responsible for cleanup. false: Use a cached {@link _Files} if available, otherwise create and cache.
      * @returns {Promise<_Files>} A newly initialized file explorer.
      */
-    async file_explorer(nodeid) {
-        return await _Files.create(this, nodeid)
+    async file_explorer(nodeid, unique=false) {
+        if (unique) {
+            return await _Files.create(this, nodeid)
+        }
+        if (!this._file_tunnels[nodeid] || !this._file_tunnels[nodeid].alive) {
+            this._file_tunnels[nodeid] = await _Files.create(this, nodeid)
+        }
+        return this._file_tunnels[nodeid]
     }
 
     _checkAmtPassword(p) { return (p.length > 7) && (/\d/.test(p)) && (/[a-z]/.test(p)) && (/[A-Z]/.test(p)) && (/\W/.test(p)); }
@@ -1753,6 +1797,10 @@ class _SmartShell {
             let m = data.toString().match(this._regex)
             return data.slice(0, m.index)
         })
+    }
+
+    get alive() {
+        return this._shell.alive
     }
 
     /**
@@ -2168,11 +2216,11 @@ class _Shell extends _Tunnel {
      * @returns {_Shell} Instance of _Shell
      */
     constructor(session, node_id) {
+        super(session, node_id, PROTOCOL.terminal)
         this.recorded = null
         this._buffer = Buffer.alloc(0)
         this._message_queue = []
         this._command_id = 0
-        super(session, node_id, PROTOCOL.terminal)
 
         this._initialize()
     }
@@ -2298,6 +2346,7 @@ class _Shell extends _Tunnel {
                 this.recorded = true
             }
             this.write(`${this._protocol}`); // Terminal
+            this.alive = true
             this.initialized.resolve()
         }
     }
