@@ -3,7 +3,7 @@
 * @author Josiah Baldwin
 * @copyright Intel Corporation 2021-2021
 * @license Apache-2.0
-* @version v2.0.0
+* @version v2.2.1
 */
 
 import https_proxy_agent from 'https-proxy-agent'
@@ -657,8 +657,8 @@ class Session {
         } else if (meshid) {
             command_list.push(this._send_command({ action: 'nodes', meshid: meshid}, "list_devices", timeout))
         } else {
-            command_list.push(this._send_command({ action: 'meshes' }, "list_devices"), timeout)
-            command_list.push(this._send_command({ action: 'nodes' }, "list_devices"), timeout)
+            command_list.push(this._send_command({ action: 'meshes' }, "list_devices", timeout))
+            command_list.push(this._send_command({ action: 'nodes' }, "list_devices", timeout))
             
         }
         return await Promise.all(command_list).then((args)=>{
@@ -1258,7 +1258,7 @@ class Session {
             userids = [userids]
         }
         for (let userid of userids) {
-            requests.push(this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userid }, id_obj, timeout), "remove_users_from_device_group"))
+            requests.push(this._send_command(Object.assign({}, { action: 'removemeshuser', userid: userid }, id_obj), "remove_users_from_device_group", timeout))
         }
         return Promise.all(requests).then((results)=>{
             let out = {}
