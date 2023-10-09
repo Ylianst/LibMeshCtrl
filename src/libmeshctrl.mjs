@@ -280,9 +280,10 @@ class Session {
      * @param {string} [options.loginkey=null] - Key from already handled login. Overrides username/password.
      * @param {string} [options.proxy=null] - "url:port" to use for proxy server
      * @param {string} [options.token=null] - Login token. This appears to be superfluous
+     * @param {string} [options.ignoreSSL=false] - Ignore SSL errors
      * @returns {Session} Instance of Session
      */
-    constructor(url, {user=null, domain=null, password=null, loginkey=null, proxy=null, token=null}) {
+    constructor(url, {user=null, domain=null, password=null, loginkey=null, proxy=null, token=null, ignoreSSL=false}) {
         if (url.length < 5 || (!url.startsWith('wss://') && (!url.startsWith('ws://')))) {
             throw Error("Invalid URL")
         }
@@ -333,6 +334,7 @@ class Session {
         this._file_tunnels = {}
         this._shell_tunnels = {}
         this._smart_shell_tunnels = {}
+        this._ignoreSSL = ignoreSSL
 
         this._eventer = new EventEmitter()
 
@@ -367,7 +369,10 @@ class Session {
     _on_verify_server(clientName, certs) { return null; }
 
     _initialize() {
-        let options = { rejectUnauthorized: false, checkServerIdentity: this._on_verify_server }
+        let options = {}
+        if (this._ignoreSSL) {
+            options = { rejectUnauthorized: false, checkServerIdentity: this._on_verify_server }
+        }
 
         // Setup the HTTP proxy if needed
         if (this._proxy != null) {
@@ -1855,7 +1860,10 @@ class _Tunnel {
                 }
                 this.url = this._session.url.replace('/control.ashx', '/meshrelay.ashx?browser=1&p=' + this._protocol + '&nodeid=' + this.node_id + '&id=' + this._tunnel_id + '&auth=' + data.cookie)
 
-                let options = { rejectUnauthorized: false, checkServerIdentity: this._on_verify_server }
+                let options = {}
+                if (this._session._ignoreSSL) {
+                    options = { rejectUnauthorized: false, checkServerIdentity: this._on_verify_server }
+                }
 
                 // Setup the HTTP proxy if needed
                 if (this._session._proxy != null) {

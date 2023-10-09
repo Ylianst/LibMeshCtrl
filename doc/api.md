@@ -165,6 +165,7 @@ Constructor for Session
 | [options.loginkey] | <code>string</code> | <code>null</code> | Key from already handled login. Overrides username/password. |
 | [options.proxy] | <code>string</code> | <code>null</code> | "url:port" to use for proxy server |
 | [options.token] | <code>string</code> | <code>null</code> | Login token. This appears to be superfluous |
+| [options.ignoreSSL] | <code>string</code> | <code>false</code> | Ignore SSL errors |
 
 <a name="Session+close"></a>
 
