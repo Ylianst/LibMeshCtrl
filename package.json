@@ -1,6 +1,6 @@
 {
     "name": "libmeshctrl",
-    "version": "2.3.0",
+    "version": "2.3.1",
     "description": "API for remotely interacting with a MeshCentral server instance",
     "author": "Josiah Baldwin",
     "license": "Apache-2.0",

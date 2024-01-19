@@ -417,7 +417,12 @@ class Session {
 
     _receive_message(raw_data) {
         var data = null;
-        data = JSON.parse(raw_data)
+        this._eventer.emit("raw", data)
+        try {
+            data = JSON.parse(raw_data)
+        } catch (err) {
+            return
+        }
         if (data.action == "serverinfo") {
             this._currentDomain = data.serverinfo.domain;
             this._server_info = data.serverinfo
