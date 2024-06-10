@@ -1712,7 +1712,7 @@ class Session {
      * @returns {Promise<Object>} - {result: bool whether upload succeeded, size: number of bytes uploaded}
      */
     async upload_file(nodeid, filepath, target, unique_file_tunnel=false) {
-        f = fs.createReadStream(filepath)
+        let f = fs.createReadStream(filepath)
         return this.upload(nodeid, f, target, unique_file_tunnel)
     }
 
