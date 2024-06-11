@@ -99,17 +99,21 @@ let _make_enum = (properties, {start_value=0x0, use_string=false}={})=>{
     return e
 }
 
-let _make_bitwise_enum = (properties, {all_prop=null, none_prop=null, start_value=0x1}={})=> {
+let _make_bitwise_enum = (properties, {all_prop=null, all_prop_value=undefined, none_prop=null, start_value=0x1}={})=> {
     let e = {},
         value = start_value
     for (let prop of properties) {
         e[prop] = value
         value <<= 1
     }
+    
     if (all_prop) {
-        let all_value = value>>1
-        while (value>>=1 >= start_value) {
-            all_value |= value
+        let all_value = all_prop_value
+        if (all_value === undefined) {
+            all_value = value>>1
+            while (value>>=1 >= start_value) {
+                all_value |= value
+            }
         }
         e[all_prop] = all_value
     }
@@ -208,7 +212,7 @@ const USERRIGHTS = _make_bitwise_enum(['backup', 'manageusers', 'restore', 'file
  * @prop {number} resetpoweroff - Right to reset or power off node
  * @prop {number} fullrights - User has all rights above
  */
-const MESHRIGHTS = _make_bitwise_enum(["editgroup", "manageusers", "managedevices", "remotecontrol", "agentconsole", "serverfiles", "wakedevices", "notes", "desktopviewonly", "noterminal", "nofiles", "noamt", "limiteddesktop", "limitedevents", "chatnotify", "uninstall", "noremotedesktop", "remotecommands", "resetpoweroff"], {all_prop:"fullrights", none_prop: "norights"})
+const MESHRIGHTS = _make_bitwise_enum(["editgroup", "manageusers", "managedevices", "remotecontrol", "agentconsole", "serverfiles", "wakedevices", "notes", "desktopviewonly", "noterminal", "nofiles", "noamt", "limiteddesktop", "limitedevents", "chatnotify", "uninstall", "noremotedesktop", "remotecommands", "resetpoweroff", "guestsharing", "devicedetails", "relay"], {all_prop:"fullrights", all_prop_value: 0xFFFFFFFF, none_prop: "norights"})
 
 /**
  * @readonly
