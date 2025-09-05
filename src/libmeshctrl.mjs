@@ -451,6 +451,7 @@ class Session {
             //      getnetworkinfo
             //      lastconnect
             //      getsysinfo
+            //      getDeviceDetails
             // console.log(`emitting ${data.action}`)
             this._eventer.emit(data.action, data)
         }
@@ -665,7 +666,7 @@ class Session {
     async list_devices({details=false, group=null, meshid=null}={}, timeout=null) {
         let command_list = []
         if (details) {
-            command_list.push(this._send_command({action: "getDeviceDetails", type:"json"}, "list_devices", timeout))
+            command_list.push(this._send_command_no_response_id({action: "getDeviceDetails", type:"json"}, timeout))
         } else if (group) {
             command_list.push(this._send_command({ action: 'nodes', meshname: group}, "list_devices", timeout))
         } else if (meshid) {
@@ -677,7 +678,16 @@ class Session {
         }
         return await Promise.all(command_list).then((args)=>{
             if (details) {
-                return args[0]
+                // Accept any number of nested strings, meshcentral is odd
+                let nodes = args[0].data
+                while (true) {
+                    try {
+                        nodes = JSON.parse(nodes)
+                    } catch {
+                        break
+                    }
+                }
+                return nodes
             } else if (group) {
                 return args[0]
             } else if (meshid) {
