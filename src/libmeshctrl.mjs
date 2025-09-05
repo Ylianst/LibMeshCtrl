@@ -421,7 +421,7 @@ class Session {
 
     _receive_message(raw_data) {
         var data = null;
-        this._eventer.emit("raw", data)
+        this._eventer.emit("raw", raw_data)
         try {
             data = JSON.parse(raw_data)
         } catch (err) {
