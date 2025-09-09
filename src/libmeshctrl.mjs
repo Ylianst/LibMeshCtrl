@@ -495,14 +495,18 @@ class Session {
         while (this._inflight.has(id = `meshctrl_${name}_${this._get_command_id()}`)){}
         this._inflight.add(id)
         let p = new Promise((resolve, reject)=>{
-            this._eventer.once(id, (data)=>{
-                this._inflight.delete(id)
-                if (data instanceof Error) {
-                    reject(data)
-                } else {
-                    resolve(data)
-                }
-            })
+            try {
+                this._eventer.once(id, (data)=>{
+                    this._inflight.delete(id)
+                    if (data instanceof Error) {
+                        reject(data)
+                    } else {
+                        resolve(data)
+                    }
+                })
+            } catch (err) {
+                reject(err)
+            }
         })
         this._sock.send(JSON.stringify(Object.assign({}, data, { tag: id, responseid: id })))
         if (timeout === null) {
@@ -522,13 +526,17 @@ class Session {
             throw new SocketError("Socket Closed")
         }
         let p = new Promise((resolve, reject)=>{
-            this._eventer.once(data.action, (data)=>{
-                if (data instanceof Error) {
-                    reject(data)
-                } else {
-                    resolve(data)
-                }
-            })
+            try {
+                this._eventer.once(data.action, (data)=>{
+                    if (data instanceof Error) {
+                        reject(data)
+                    } else {
+                        resolve(data)
+                    }
+                })
+            } catch (err) {
+                reject(err)
+            }
         })
         this._sock.send(JSON.stringify(data))
         if (timeout === null) {
@@ -1011,16 +1019,20 @@ class Session {
             groupid = `ugrp//${groupid}`
         }
         return new Promise((resolve, reject)=>{
-            let l = this.listen_to_events((data)=>{
-                resolve(data.event.msgArgs[0])
-                this.stop_listening_to_events(l)
-            }, {"event": {"etype":"ugrp"}})
-            this._send_command({ action: 'addusertousergroup', ugrpid: groupid, usernames: userids}, "add_users_to_user_group", timeout).then((data)=>{
-                if (data.result && data.result.toLowerCase() !== "ok") {
-                    reject(new ServerError(data.result))
-                }
+            try {
+                let l = this.listen_to_events((data)=>{
+                    resolve(data.event.msgArgs[0])
+                    this.stop_listening_to_events(l)
+                }, {"event": {"etype":"ugrp"}})
+                this._send_command({ action: 'addusertousergroup', ugrpid: groupid, usernames: userids}, "add_users_to_user_group", timeout).then((data)=>{
+                    if (data.result && data.result.toLowerCase() !== "ok") {
+                        reject(new ServerError(data.result))
+                    }
 
-            })
+                })
+            } catch (err) {
+                reject(err)
+            }
         })
     }
 
@@ -1426,27 +1438,30 @@ class Session {
                 }
             }
         }
-        return new Promise((resolve, reject)=>{
-            let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]))
-            let l = this.listen_to_events((data)=>{
-                if (match_nodeid(data.nodeid, nodeids)) {
-                    if (data.value === "Run commands completed.") {
-                        result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true})
-                        if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
-                            resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])))
-                            this.stop_listening_to_events(l)
+        return new Promise(async (resolve, reject)=>{
+            try {
+                let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]));
+                let l = this.listen_to_events((data)=>{
+                    if (match_nodeid(data.nodeid, nodeids)) {
+                        if (data.value === "Run commands completed.") {
+                            result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true});
+                            if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
+                                resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
+                                this.stop_listening_to_events(l);
+                            }
+                        } else if (data.value.startsWith("Run commands")) {
+                            return
                         }
-                    } else if (data.value.startsWith("Run commands")) {
-                        return
+                        result[match_nodeid(data.nodeid, nodeids)].result.push(data.value);
                     }
-                    result[match_nodeid(data.nodeid, nodeids)].result.push(data.value)
-                }
-            }, {action: "msg", type: "console"})
-            this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command", timeout).then((data)=>{
+                }, {action: "msg", type: "console"});
+                let data = await this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command", timeout)
                 if (data.result && data.result.toLowerCase() !== "ok") {
-                    reject(new ServerError(data.result))
+                    reject(new ServerError(data.result));
                 }
-            })
+            } catch (err) {
+                reject(err)
+            }
         })
     }
 
@@ -1628,19 +1643,23 @@ class Session {
      */
     async device_open_url(nodeid, url, timeout=null) {
         return new Promise((resolve, reject)=>{
-            let l = this.listen_to_events((data)=>{
-                this.stop_listening_to_events(l)
-                if (data.success) {
-                    resolve(true)
-                } else {
-                    reject(new Error("Failed to open url"))
-                }
-            }, {type: "openUrl", url: url})
-            this._send_command({ action: 'msg', type: 'openUrl', nodeid: nodeid, url: url }, "device_open_url", timeout).then((data)=>{
-                if (data.result && data.result.toLowerCase() !== "ok") {
-                    reject(new ServerError(data.result))
-                }
-            })
+            try {
+                let l = this.listen_to_events((data)=>{
+                    this.stop_listening_to_events(l)
+                    if (data.success) {
+                        resolve(true)
+                    } else {
+                        reject(new Error("Failed to open url"))
+                    }
+                }, {type: "openUrl", url: url})
+                this._send_command({ action: 'msg', type: 'openUrl', nodeid: nodeid, url: url }, "device_open_url", timeout).then((data)=>{
+                    if (data.result && data.result.toLowerCase() !== "ok") {
+                        reject(new ServerError(data.result))
+                    }
+                })
+            } catch (err) {
+                reject(err)
+            }
         })
     }
 
@@ -2279,31 +2298,35 @@ class _Shell extends _Tunnel {
     async read(length=null, timeout=null, return_intermediate=false) {
         let start = new Date()
         return new Promise((resolve, reject)=>{
-            let check_data = ()=>{
-                if ((timeout !== null && new Date() - start > timeout) || this._sock.readyState > 1) {
-                    let obj = {reason: this._sock.readyState < 2 ? "timeout" : "closed"}
-                    if (return_intermediate) {
-                        obj["data"] = this._buffer.slice(0, length)
-                        this._buffer = this._buffer.slice(length)
-                    }
-                    reject(obj)
-                } else if (length !== null && this._buffer.length < length) {
-                    setTimeout(()=>{
-                        check_data()
-                    }, 100)
-                } else {
-                    if (length !== null) {
-                        let data = this._buffer.slice(0, length)
-                        this._buffer = this._buffer.slice(length)
-                        resolve(data)
+            try {
+                let check_data = ()=>{
+                    if ((timeout !== null && new Date() - start > timeout) || this._sock.readyState > 1) {
+                        let obj = {reason: this._sock.readyState < 2 ? "timeout" : "closed"}
+                        if (return_intermediate) {
+                            obj["data"] = this._buffer.slice(0, length)
+                            this._buffer = this._buffer.slice(length)
+                        }
+                        reject(obj)
+                    } else if (length !== null && this._buffer.length < length) {
+                        setTimeout(()=>{
+                            check_data()
+                        }, 100)
                     } else {
-                        let data = this._buffer.slice()
-                        this._buffer = Buffer.alloc(0)
-                        resolve(data)
+                        if (length !== null) {
+                            let data = this._buffer.slice(0, length)
+                            this._buffer = this._buffer.slice(length)
+                            resolve(data)
+                        } else {
+                            let data = this._buffer.slice()
+                            this._buffer = Buffer.alloc(0)
+                            resolve(data)
+                        }
                     }
                 }
+                check_data()
+            } catch (err) {
+                reject(err)
             }
-            check_data()
         })
     }
 
@@ -2319,34 +2342,38 @@ class _Shell extends _Tunnel {
             start = new Date()
 
         return new Promise((resolve, reject)=>{
-            let check_data = ()=>{
-                if ((timeout !== null && new Date() - start > timeout) || this._sock.readyState > 1) {
-                    let obj = {reason: this._sock.readyState < 2 ? "timeout" : "closed"}
-                    if (return_intermediate) {
-                        this.read(1024, 100, true).then((data)=>{
-                            obj["data"] = data
+            try {
+                let check_data = ()=>{
+                    if ((timeout !== null && new Date() - start > timeout) || this._sock.readyState > 1) {
+                        let obj = {reason: this._sock.readyState < 2 ? "timeout" : "closed"}
+                        if (return_intermediate) {
+                            this.read(1024, 100, true).then((data)=>{
+                                obj["data"] = data
+                                reject(obj)
+                            }, (({reason, data})=>{
+                                obj["data"] = data
+                                reject(obj)
+                            }))
+                        } else {
                             reject(obj)
-                        }, (({reason, data})=>{
-                            obj["data"] = data
-                            reject(obj)
-                        }))
+                        }
                     } else {
-                        reject(obj)
-                    }
-                } else {
-                    let m = this._buffer.toString().match(regex)
-                    if (m !== null) {
-                        this.read(m.index+m[0].length).then((data)=>{
-                            resolve(data)
-                        })
-                    } else {
-                        setTimeout(()=>{
-                            check_data()
-                        }, 100)
+                        let m = this._buffer.toString().match(regex)
+                        if (m !== null) {
+                            this.read(m.index+m[0].length).then((data)=>{
+                                resolve(data)
+                            })
+                        } else {
+                            setTimeout(()=>{
+                                check_data()
+                            }, 100)
+                        }
                     }
                 }
+                check_data()
+            } catch (err) {
+                reject(err)
             }
-            check_data()
         })
     }
 
