@@ -1018,7 +1018,7 @@ class Session {
         if (!groupid.startsWith("ugrp/")) {
             groupid = `ugrp//${groupid}`
         }
-        return new Promise((resolve, reject)=>{
+        return Promise.race([new Promise((resolve, reject)=>{
             try {
                 let l = this.listen_to_events((data)=>{
                     resolve(data.event.msgArgs[0])
@@ -1033,7 +1033,7 @@ class Session {
             } catch (err) {
                 reject(err)
             }
-        })
+        }), new Promise((_r, rej)=>{if (timeout) { setTimeout(rej, timeout, new TimeoutError(`timed out`)) }})])
     }
 
     /** 
@@ -1438,7 +1438,7 @@ class Session {
                 }
             }
         }
-        return new Promise(async (resolve, reject)=>{
+        return Promise.race([new Promise(async (resolve, reject)=>{
             try {
                 let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]));
                 let l = this.listen_to_events((data)=>{
@@ -1462,7 +1462,7 @@ class Session {
             } catch (err) {
                 reject(err)
             }
-        })
+        }), new Promise((_r, rej)=>{if (timeout) { setTimeout(rej, timeout, new TimeoutError(`timed out`)) }})])
     }
 
     /** Get a terminal shell on the given device
@@ -1642,7 +1642,7 @@ class Session {
      * @throws {TimeoutError} Command timed out
      */
     async device_open_url(nodeid, url, timeout=null) {
-        return new Promise((resolve, reject)=>{
+        return Promise.race([new Promise((resolve, reject)=>{
             try {
                 let l = this.listen_to_events((data)=>{
                     this.stop_listening_to_events(l)
@@ -1660,7 +1660,7 @@ class Session {
             } catch (err) {
                 reject(err)
             }
-        })
+        }), new Promise((_r, rej)=>{if (timeout) { setTimeout(rej, timeout, new TimeoutError(`timed out`)) }})])
     }
 
     /** Display a message on remote device.
