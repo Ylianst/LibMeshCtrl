@@ -437,7 +437,9 @@ class Session {
             this.initialized.resolve()
             return
         }
-        this._eventer.emit("server_event", data)
+        if (data.action == "event" || data.action == "msg" || data.action == "interuser") {
+            this._eventer.emit("server_event", data)
+        }
         if (data.responseid || data.tag) {
             this._eventer.emit(data.responseid || data.tag, data)
         }
@@ -1418,7 +1420,7 @@ class Session {
      * @throws {SocketError} Info about socket closure
      * @throws {TimeoutError} Command timed out
      */
-    async run_command(nodeids, command, {powershell=false, runasuser=false, runasuseronly=false, ignore_output=false}={}, timeout=null) {
+    async run_command(nodeids, command, {powershell=false, runasuser=false, runasuseronly=false}={}, timeout=null) {
         let runAsUser = 0;
         if (runasuser) { runAsUser = 1; }
         if (runasuseronly) { runAsUser = 2; }
@@ -1439,58 +1441,23 @@ class Session {
         return Promise.race([new Promise(async (resolve, reject)=>{
             try {
                 let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]));
-                let data = await this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser, reply: !ignore_output}, "run_command", timeout)
-                if (data.type !== "runcommands" && (data.result || "ok").toLowerCase() !== "ok") {
+                let l = this.listen_to_events((data)=>{
+                    if (match_nodeid(data.nodeid, nodeids)) {
+                        if (data.value === "Run commands completed.") {
+                            result[match_nodeid(data.nodeid, nodeids)] = Object.assign((result[match_nodeid(data.nodeid, nodeids)] || {}), {complete: true});
+                            if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
+                                resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
+                                this.stop_listening_to_events(l);
+                            }
+                        } else if (data.value.startsWith("Run commands")) {
+                            return
+                        }
+                        result[match_nodeid(data.nodeid, nodeids)].result.push(data.value);
+                    }
+                }, {action: "msg", type: "console"});
+                let data = await this._send_command({ action: 'runcommands', nodeids: nodeids, type: (powershell ? 2 : 0), cmds: command, runAsUser: runAsUser }, "run_command", timeout)
+                if (data.result && data.result.toLowerCase() !== "ok") {
                     reject(new ServerError(data.result));
-                } else if (data.type !== "runcommands" && (data.result || "ok").toLowerCase() === "ok" && !ignore_output){
-                    let l = this.listen_to_events((data)=>{
-                        let nodeid = match_nodeid(data.nodeid, nodeids)
-                        if (nodeid) {
-                            if (data.value === "Run commands completed.") {
-                                result[nodeid] = Object.assign((result[nodeid] || {}), {complete: true});
-                                if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
-                                    resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
-                                    this.stop_listening_to_events(l);
-                                    this.stop_listening_to_events(l2);
-                                }
-                            }
-                            if (data.value.startsWith("Run commands")) {
-                                return
-                            }
-                            result[match_nodeid(data.nodeid, nodeids)].result.push(data.value);
-                        }
-                    }, {action: "msg", type: "console"});
-                    let l2 = this.listen_to_events((data)=>{
-                        if (data.result && data.result.toLowerCase() !== "ok") {
-                            reject(new ServerError(data.result));
-                            this.stop_listening_to_events(l);
-                            this.stop_listening_to_events(l2);
-                        }
-                    }, {action: "runcommands", responseid: data.responseid})
-                } else if (data.type === "runcommands" && !ignore_output) {
-                    let _parse_event = (event)=>{
-                        let nodeid = match_nodeid(event.nodeid, nodeids)
-                        if (nodeid) {
-                            result[nodeid] = Object.assign(result[nodeid], {complete: true});
-                            result[nodeid].result.push(event.result);
-                        }
-                        if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
-                            return true
-                        }
-                        return false
-                    }
-                    if (_parse_event(data)) {
-                        resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])))
-                        return
-                    }
-                    let l = this.listen_to_events((data)=>{
-                        if (_parse_event(data)) {
-                            resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
-                            this.stop_listening_to_events(l);
-                        }
-                    }, {action: "msg", type: "runcommands", responseid: data.responseid});
-                } else {
-                    resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
                 }
             } catch (err) {
                 reject(err)
