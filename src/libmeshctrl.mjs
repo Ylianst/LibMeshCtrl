@@ -437,9 +437,7 @@ class Session {
             this.initialized.resolve()
             return
         }
-        if (data.action == "event" || data.action == "msg" || data.action == "interuser") {
-            this._eventer.emit("server_event", data)
-        }
+        this._eventer.emit("server_event", data)
         if (data.responseid || data.tag) {
             this._eventer.emit(data.responseid || data.tag, data)
         }
@@ -1459,6 +1457,65 @@ class Session {
                 if (data.result && data.result.toLowerCase() !== "ok") {
                     reject(new ServerError(data.result));
                 }
+            } catch (err) {
+                reject(err)
+            }
+        }), new Promise((_r, rej)=>{if (timeout) { setTimeout(rej, timeout, new TimeoutError(`timed out`)) }})])
+    }
+
+    /** Run a mesh console command on any number of nodes. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+     * @param {string|string[]} nodeids - Unique ids of nodes on which to run the command
+     * @param {string} command - Command to run
+     * @param {Object} [options={}]
+     * @param {number?} [timeout=null] - duration in milliseconds to wait for a response before throwing an error
+     * @returns {Promise<Object>} Object containing mapped output of the commands by device
+     * @throws {ServerError} Error text from server if there is a failure
+     * @throws {SocketError} Info about socket closure
+     * @throws {TimeoutError} Command timed out
+     */
+    async run_console_command(nodeids, command, {}={}, timeout=null) {
+        if (typeof(nodeids) === "string") { nodeids = [nodeids] }
+        let match_nodeid = (id, ids)=>{
+            for (let nid of ids) {
+                if (nid === id) {
+                    return nid
+                }
+                if (nid.slice(6) === id) {
+                    return nid
+                }
+                if (`node//${nid}` === id) {
+                    return nid
+                }
+            }
+        }
+        return Promise.race([new Promise(async (resolve, reject)=>{
+            try {
+                let result = Object.fromEntries(nodeids.map((n)=>[n, {complete: false, result: []}]));
+                let l = this.listen_to_events((data)=>{
+                    let nodeid = match_nodeid(data.nodeid, nodeids)
+                    if (nodeid) {
+                        result[match_nodeid(data.nodeid, nodeids)].result.push(data.value);
+                        result[nodeid] = Object.assign((result[nodeid] || {}), {complete: true});
+                        if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
+                            resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
+                            this.stop_listening_to_events(l);
+                            this.stop_listening_to_events(l2);
+                        }
+                    }
+                }, {action: "msg", type: "console"});
+                let data = await this._send_command({ action: 'runcommands', nodeids: nodeids, type: 4, cmds: command, }, "run_console_command", timeout)
+                if (data.result && data.result.toLowerCase() !== "ok") {
+                    this.stop_listening_to_events(l);
+                    reject(new ServerError(data.result));
+                    return
+                }
+                let l2 = this.listen_to_events((data)=>{
+                    if (data.result && data.result.toLowerCase() !== "ok") {
+                        reject(new ServerError(data.result));
+                        this.stop_listening_to_events(l);
+                        this.stop_listening_to_events(l2);
+                    }
+                }, {action: "runcommands", responseid: data.responseid})
             } catch (err) {
                 reject(err)
             }
