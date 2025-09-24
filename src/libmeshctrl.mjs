@@ -1946,7 +1946,7 @@ class _SmartShell {
     }
 }
 
-const PROTOCOL = _make_enum(["terminal", "", "", "", "files"], {start_value: 0x1})
+const PROTOCOL = _make_enum(["terminal", "desktop", "", "", "files"], {start_value: 0x1})
 
 class _Tunnel {
     
