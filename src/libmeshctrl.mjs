@@ -1979,10 +1979,9 @@ class _Tunnel {
 
     _initialize() {
         this._session._send_command_no_response_id({ "action":"authcookie" }).then((data)=>{
-            // if ((settings.cmd == 'upload') || (settings.cmd == 'download')) { protocol = 5; } // Files
             if ((this.node_id.split('/') != 3) && (this._session._currentDomain != null)) { this.node_id = 'node/' + this._session._currentDomain + '/' + this.node_id; }
             this._tunnel_id = this._session._getRandomHex(6);
-            this._session._send_command({ action: 'msg', nodeid: this.node_id, type: 'tunnel', usage: 1, value: '*/meshrelay.ashx?p=' + this._protocol + '&nodeid=' + this.node_id + '&id=' + this._tunnel_id + '&rauth=' + data.rcookie }, "initialize_shell").then((data2)=>{
+            this._session._send_command({ action: 'msg', nodeid: this.node_id, type: 'tunnel', usage: this._protocol, value: '*/meshrelay.ashx?p=' + this._protocol + '&nodeid=' + this.node_id + '&id=' + this._tunnel_id + '&rauth=' + data.rcookie }, "initialize_shell").then((data2)=>{
                 if (data2.result !== "OK") {
                     this._socket_open.reject(data2)
                     this.initialized.reject(data2)
