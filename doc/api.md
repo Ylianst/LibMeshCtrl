@@ -124,6 +124,7 @@ Class for MeshCentral Session
         * [.device_info(nodeid, [timeout])](#Session+device_info) ⇒ <code>Promise</code>
         * [.edit_device(nodeid, [options], [timeout])](#Session+edit_device) ⇒ <code>Promise.&lt;boolean&gt;</code>
         * [.run_command(nodeids, command, [options], [timeout])](#Session+run_command) ⇒ <code>Promise.&lt;Object&gt;</code>
+        * [.run_console_command(nodeids, command, [options], [timeout])](#Session+run_console_command) ⇒ <code>Promise.&lt;Object&gt;</code>
         * [.shell(nodeid, [unique])](#Session+shell) ⇒ [<code>Promise.&lt;\_Shell&gt;</code>](#_Shell)
         * [.smart_shell(nodeid, regex, [unique])](#Session+smart_shell) ⇒ [<code>Promise.&lt;\_SmartShell&gt;</code>](#_SmartShell)
         * [.wake_devices(nodeids, [timeout])](#Session+wake_devices) ⇒ <code>Promise.&lt;boolean&gt;</code>
@@ -850,6 +851,27 @@ Run a command on any number of nodes. WARNING: Non namespaced call. Calling this
 | [options.powershell] | <code>boolean</code> | <code>false</code> | Use powershell to run command. Only available on Windows. |
 | [options.runasuser] | <code>boolean</code> | <code>false</code> | Attempt to run as a user instead of the root permissions given to the agent. Fall back to root if we cannot. |
 | [options.runasuseronly] | <code>boolean</code> | <code>false</code> | Error if we cannot run the command as the logged in user. |
+| [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
+
+<a name="Session+run_console_command"></a>
+
+### session.run\_console\_command(nodeids, command, [options], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
+Run a mesh console command on any number of nodes. WARNING: Non namespaced call. Calling this function again before it returns may cause unintended consequences.
+
+**Kind**: instance method of [<code>Session</code>](#Session)  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - Object containing mapped output of the commands by device  
+**Throws**:
+
+- [<code>ServerError</code>](#ServerError) Error text from server if there is a failure
+- [<code>SocketError</code>](#SocketError) Info about socket closure
+- [<code>TimeoutError</code>](#TimeoutError) Command timed out
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| nodeids | <code>string</code> \| <code>Array.&lt;string&gt;</code> |  | Unique ids of nodes on which to run the command |
+| command | <code>string</code> |  | Command to run |
+| [options] | <code>Object</code> | <code>{}</code> |  |
 | [timeout] | <code>number</code> | <code></code> | duration in milliseconds to wait for a response before throwing an error |
 
 <a name="Session+shell"></a>
