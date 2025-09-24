@@ -437,9 +437,7 @@ class Session {
             this.initialized.resolve()
             return
         }
-        if (data.action == "event" || data.action == "msg" || data.action == "interuser") {
-            this._eventer.emit("server_event", data)
-        }
+        this._eventer.emit("server_event", data)
         if (data.responseid || data.tag) {
             this._eventer.emit(data.responseid || data.tag, data)
         }
