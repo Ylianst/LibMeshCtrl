@@ -1451,6 +1451,7 @@ class Session {
                                 if (_.every(Object.entries(result).map(([key, o])=>o.complete))) {
                                     resolve(Object.fromEntries(Object.entries(result).map(([key, o])=>[key, o.result.join("")])));
                                     this.stop_listening_to_events(l);
+                                    this.stop_listening_to_events(l2);
                                 }
                             }
                             if (data.value.startsWith("Run commands")) {
@@ -1459,6 +1460,13 @@ class Session {
                             result[match_nodeid(data.nodeid, nodeids)].result.push(data.value);
                         }
                     }, {action: "msg", type: "console"});
+                    let l2 = this.listen_to_events((data)=>{
+                        if (data.result && data.result.toLowerCase() !== "ok") {
+                            reject(new ServerError(data.result));
+                            this.stop_listening_to_events(l);
+                            this.stop_listening_to_events(l2);
+                        }
+                    }, {action: "runcommands", responseid: data.responseid})
                 } else if (data.type === "runcommands" && !ignore_output) {
                     let _parse_event = (event)=>{
                         let nodeid = match_nodeid(event.nodeid, nodeids)
